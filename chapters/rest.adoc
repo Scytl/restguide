@@ -1,0 +1,368 @@
+= RESTful Web Services
+
+== What is REST?
+
+[quote, Wikipedia]
+Representational state transfer (REST) is an architectural style consisting of a coordinated set of architectural constraints applied to components, connectors, and data elements, within a distributed hypermedia system
+
+Web service APIs that follow _REST_ architectural are known as RESTful Web Services.
+They defines with these aspects:
+
+* a base _URI_ to identify a resource
+* an internet media type like _JSON_, _XML_, _image_.
+* use of standard _HTTP_ methods such as _GET_, _POST_, _PUT_ or _DELETE_.
+* hypertext links to reference state
+* hypertext links to reference related resources
+
+RESTful resources are identified by _URI_.
+Depending on the form of the _URI_, more or less resources will be involved.
+Let's see some examples of valid _URIs_ and their meaning.
+
+[[valid_uri]]
+[cols="2*", options="header"]
+|===
+|URI
+|Description
+
+m|/items
+|Represents a collection of items
+
+m|/items/name/Beer
+|Represents  items with name Beer
+
+m|/items/ordered
+|Represents a collection of items that are ordered
+
+m|/users/12/items
+|Represents all the items for a user identified with 12
+|===
+
+As seen in <<valid_uri, previous table>>, _URI_ only are used to represent resources, but not what action (_verb_) to apply them.
+Actions are set by _HTTP_ methods.
+
+[cols="2*", options="header"]
+|===
+|HTTP methods
+|Description
+
+m|GET
+|Get resource/s
+
+m|POST
+|Create a resource
+
+m|PUT
+|Update a resource if exists or create a new one
+
+m|DELETE
+|Delete a resource
+
+m|HEAD
+|HTTP headers are returned without content.
+
+m|PATCH
+|Apply a *set of changes* to the resource identified by the request's _URI_.
+|===
+
+So the combination of _HTTP_ method and _URI_ sets the operation to be executed and which resources will be affected.
+
+[cols="2*", options="header"]
+|===
+|HTTP method resource URI
+|Description
+
+m|GET /items
+|Gets a list of items
+
+m|POST /items
+|Create a new item
+
+m|PUT /items/name/Beer
+|Updates some data from items with name Beer
+
+|DELETE /users/12/items
+|Deletes all items of user with id 12
+|===
+
+[TIP]
+====
+* Use nouns to navigate through resources. For example `/users/12/items` is better than `/users/12/getItems`.
+* Use subresources to refer to resource associations. For example `/users/12/items` to get all items from an specific user.
+* Use query params for specific variations. For example `/users?age=25`. And path params only for identifiers.
+* Add defaults for output format for just in case client does not specify it.
+* _JSON_ document attributes in camel case form.
+* In _PUT_ and _POST_ use body content to send data to be created or updated.
+* By specification _PUT_ is a create or update operation. To avoid confusions _PUT_ should only update resources.
+* Use _PATCH_ to execute a set of operations atomically. _PATCH_ can be used to change a resource partially or apply some operations on it.
+====
+
+.About PATCH
+****
+The _PATCH_ method requests that a set of changes to be applied to resource identified by the request's _URI_.
+This set contains instructions describing how a resource currently residing on the origin server should be modified.
+
+But _PATCH_ is not about sending an update value rather than the entire resource.
+
+Next example is *wrong* and should be avoided:
+
+[[bad-patch]]
+[source, json]
+----
+PATCH /users/123
+
+{ "email": "new.email@example.org" }
+----
+
+As mentioned, _PATCH_ should provide a description of changes to be applied.
+You can think about it as a sequence of operations to apply to a resource.
+
+RFC-6902 <<rfc6902>> defines a way for expression operations into a _JSON_ document.
+Also it defines the 6 possible operations that can be executed:
+
+test:: tests that a value at the target location is equal to a specified value
+remove:: removes the value at the target location.
+add::  if the target location specifies an array index, a new value is inserted into the array at the specified index. If the target location specifies an object member that does not already exist, a new member is added to the object.
+replace:: replaces the value at the target location with a new value.
+move:: removes the value at a specified location and adds it to the target location.
+copy:: copies the value at a specified location to the target location.
+
+A possible document may look like:
+
+[source, json]
+----
+[
+  { "op": "test", //<1>
+    "path": "/a/b/c", //<2>
+    "value": "foo" //<3>
+  },
+  { "op": "replace", "path": "/a/b/c", "value": 42 }
+]
+----
+<1> Operation is set by using `op` attribute and as value the name of the operation.
+<2> `path` defines where the operation is applied within resource.
+<3> `value` to apply to given operation.
+
+Previous <<bad-patch, patch example>> can be rewritten to:
+
+[source, json]
+----
+PATCH /users/123 //<1>
+
+[
+  { "op": "replace", "path": "/email", "value": "new.email@example.org" } //<2>
+]
+----
+<1> The resource to apply changes is a _user_ with id _123_.
+<2> _email_ field of given _user_ is upadated to new _value_.
+
+You can read more examples at http://tools.ietf.org/html/rfc6902#appendix-A
+****
+
+== Content Negotiation
+
+RESTful Web Services can consume and produce different media type like _JSON_, _XML_ or any other valid type like plain text or binary.
+
+Content negotiation allows different representations of a resource so that clients can consume what suits best for them.
+The de-facto media type in RESTful Web Services is _JSON_, but client side must provide to server-side which media type is expecting.
+
+There are two different approaches:
+
+* Using _HTTP_ headers. `Accept` _HTTP_ header is used by the client to indicate which media type can handle. The `Content-Type` _HTTP_ header is used to indicate the _MIME_ type of the entity being sent by the server.
+* Using _URL_ patterns. By using extension of the resource, server side knows which media type is expected by the client. For example `http://server/items.xml` to retrieve items in _XML_ form.
+
+TIP: Use _HTTP_ headers approach instead of _URL_ patterns because _HTTP_ headers provide a clear separation between infrastructure and business.
+
+== Versioning
+
+Probably RESTful _API_ will evolve during its lifetime.
+For this reason we need a way to version the _API_ and provide some kind of back-compatibility so client can choose which version to use.
+At least we should ensure that previous applications still works although a new version of the _API_ has been published.
+There are several approaches to version _APIs_:
+
+* Specifying in the _URI_ itself. For example `http://server/v2/items/12`. Note that '`v2`' is used as label to set which version of the _API_ client is expecting.
+* Specifying as request parameter. For example `http://server/items/12?version=v2`. Note that in this case version is set as query parameter '`?version=v2`'.
+* Specifying inside _HTTP_ header in `Accept` field or in a custom one. For example `Accept: application/vnd.server.v2+json` accepts the content produced in '`json`' and from '`version 2`'.
+
+TIP: Use _HTTP_ headers approach instead of _URL_ patterns because _HTTP_ headers provide a clear separation between infrastructure and business.
+
+== Response Codes
+
+RESTful Web Services use _HTTP_ protocol as communication layer.
+An _HTTP_ response must contain a response code so caller can inspect if the request it has done is correct or not.
+RESTful Web Services should follow same rules and return a response code depending on the result of executed operation.
+Next table summarize typical situations:
+
+[cols="3*", options="header"]
+|===
+|Group
+|Code
+|Description
+
+.4+|Success 2XX
+m|200 OK
+a|This returns content as a part of the response
+
+m|201 Created
+a|Used by _POST_. It must return `Location` header with resource id
+
+m|202 Accepted
+a|Used in asynchronous operations. It must return `Location` header specifying where the client can monitor for the request.
+
+m|204 No Content
+a|No content retuned as a part of the response. Used by _PUT_ when the resource is updated succesfully.
+
+.2+|Redirectional 3XX
+m|301 Permanent
+a|Shows that all requests are directed to new location
+
+m|302 Found
+a|Shows that a resource already exists and is valid
+
+.6+|Client Errors 4XX
+
+m|400 Bad Request
+a|Used when request cannot be processed due to syntax errors. For example malformed _JSON_.
+
+m|401 Unauthorized
+a|Used when request cannot be processed because of current user credentials
+
+m|404 Not Found
+a|Used when resource is not found or when an unauthenticated user request a secured resource
+
+m|406 Not Acceptable
+a|Used when the resource cannot *produce* the the _MIME_ type specified by the client
+
+m|409 Conflict
+a|Used when two resources are modified concurrently, in this case the latest modification should not be produced and return this error.
+
+m|415 Unsupported Media Type
+a|Used when the resource cannot *consume* the the _MIME_ type specified by the client
+
+m|422 Unprocessable Entity
+a|Used when request cannot be processed due to validation errors. Request body is well formed but semantically erroneous. For example an _email_ field without '`@`' character.
+
+.2+|Server Errors 5XX
+m|500 Internal Server error
+a|Used as a generic error message
+
+m|503 Service Unavailable
+a|Used when the service is under maintainance or busy
+|===
+
+[NOTE]
+====
+Most of this error codes are provided by default by container so we don't have to worry about them.
+The most used response codes are '`2XX`', '`5XX`' and some '`4XX`'.
+====
+
+In case of error codes, a _JSON_ document can be sent back with information about the failure.
+If a _JSON_ document is sent to explain the reason of the failure, it must follow next schema.
+
+[source, json]
+----
+{
+  "message": "Validation Failed", //<1>
+  "errors": [ //<2>
+    {
+      "resource": "Issue", //<3>
+      "field": "title", //<4>
+      "code": "Title field is mandatory" //<5>
+    }
+  ]
+}
+----
+
+
+[IMPORTANT]
+====
+There are some discussions about how to notify validation errors. We have based on rfc-4918 <<rfc4918>>, github API <<githubdev>> and blog post <<bennadel>> which argues that the best option is to use the _HTTP 422 code.
+====
+
+== Pagination
+
+REST _APIs_ may return a huge number of resources per request.
+To avoid overloading client side (and this is specially a problem in case of lightweight clients), we should paged each request with a certain number of items per request.
+This is known as *Response pagination*.
+Along with response is important to add some kind of metadata like current page, number of pages, total number of elements or a link to next set of results.
+
+There are two possible approaches:
+
+* Offset-based pagination which in general uses two query params named `page` which sets which page to return and `limit` that sets the maximum number of results to be returned. For example `GET items?page=1&limit=50`.
+* Time-based pagination which uses timestamps to paginate results between a specific timeframe. In this case `until` query param is used to point the end of the time range, and `since` for the beginning.
+
+In Scytl we implement pagination using next approach.
+
+[source, json]
+.Example of Offset-based response
+----
+{
+  "entities": [ //<1>
+    {
+      "name": "foo",
+        "age": 20
+    },
+    {
+      "name": "bar",
+      "age": 30
+    }
+  ],
+
+  "pagination": { //<2>
+    "size": 100, //<3>
+    "offset": 0, //<4>
+    "lastPage": true, //<5>
+    "totalElements": 2, //<6>
+    "pageNumber": 1, //<7>
+    "lastPageNumber": 1, //<8>
+    "firstPage": true, //<9>
+    "numberOfElements": 2 //<10>
+  },
+  "sort": { //<11>
+    "orderDirection": "ASC", //<12>
+    "orderFieldName": "id" //<13>
+  }
+}
+----
+<1> `entities` section adds all elements to be shown in current page.
+<2> `pagination` is the parent element for all pagination elements.
+<3> `size` is the max number of elements per page.
+<4> `offset` sets the current page (or offset). It is zero-based.
+<5> `lastPage` is a boolean that sets if it is the last page or not.
+<6> `totalElements` is the total number of elements that would be shown if no pagination was set.
+<7>  Current page number.
+<8>  Number of last page.
+<9> `firstPage` is a boolean that sets if it is in the first page or not.
+<10> Number of elements inside current page.
+<11> `sort` is the parent element for all sort parameters if elements are ordered..
+<12> Direction of the order. _ASC_ for ascendant and _DESC_ for descendant.
+<13> Ordered field.
+
+NOTE: Obviously Time-based pagination is not always possible, it will depend on the resource nature.
+
+[WARNING]
+====
+Using offset pagination does not avoid returning duplicate records in case where additional resources are added between pagination requests.
+This is something that depending on the number of pace of inserts and updates and the criticality of the information shown.
+
+To avoid this problem a cursor-based pagination can be used.
+Cursor-based pagination is pretty similar to offset approach but uses already known sequencial identifier of entity to know exactly at which point the latest result was returned.
+
+You can read about real-time pagination in http://www.sitepoint.com/paginating-real-time-data-cursor-based-pagination/
+====
+
+== Internationalization
+
+RESTful Web Services can require to serve different responsed depending on the country and the locale.
+
+Language negotiation is similar to content negotiation, so you can use diffrent approaches:
+
+* Using `Accept-Language` _HTTP_ headers.
+* Using a query parameter such as `locale`. For example `items/?locale=es`
+
+TIP: Use _HTTP_ headers approach instead of query parameter approach because _HTTP_ headers provide a clear separation between infrastructure and business.
+
+IMPORTANT: Any internacionalized response should set `Content-Language` _HTTP_ header in response as well.
+
+== REST Polling
+
+== Security

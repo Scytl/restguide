@@ -1,0 +1,709 @@
+= JAX-RS
+
+Java API for RESTful Web Services (_JAX-RS_) is the specification that provides support in creating web services according to the REST architectural pattern.
+
+RESTful Web Services are configured by using annotations.
+These annotations can be used in _POJOs_ but also in _EJBs_.
+In next examples and for maintaining us container agnostic, we are only going to use _JAX-RS_ specification classes which means they will be portable across containers and _JAX_RS_ implementations.
+Also to be focused on REST, we are not going to use _EJBs_ but pure _POJOs_.
+
+.About Apache TomEE
+****
+*Apache TomEE* is a _Java EE_ certified web profile application server.
+We can summarize as *Apache TomEE = Apache Tomcat + Java EE*.
+
+_RESTful Web Services_ can be done in Java by using any of _JAX-RS_ implementation like _Jersey_, _Apache CXF_ or _REASTEasy_.
+Any of this technologies requires a servlet container to run.
+All of them can be integrated inside any servlet container like _Tomcat_, _Jetty_, ... but in these examples we are going to use *Apache TomEE* which it comes with _JAX-RS_ provider integrated.
+****
+
+== @Path
+
++@Path+ is used to define the endpoint _URL_ of RESTful web service.
+It can be templatized to pass path parameters from _URL_ path.
+Query parameters are not set as _URL_ parameters and in case we need to get query parameters, different annotation must be used.
+
+Let's see first example of simple RESTful Web Service which gets all books using `GET` _HTTP_ method.
+
+[source, java]
+.BookResource.java
+----
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+@Path("/book") // <1>
+public class BookResource {
+
+  @GET // <2>
+  @Produces(MediaType.APPLICATION_JSON) // <3>
+  public Response books() {
+    List<Book> books = Arrays.asList(new Book("Book1"), new Book("Book2"));
+    String json = toJson(books); // <4>
+    return Response.ok(books).build(); // <5>
+  }
+
+}
+----
+<1> `@Path` sets a class as REST endpoint. In this case is bound to `/book`.
+<2> `@GET` sets which _HTTP_ method is required for executing this method.
+<3> Because of content negotiation, the media type must be set. In this case because method does not receive anything, we only need to configure the return type with `@Produces` annotation.
+<4> _Java EE_ specification does not provide any specific way to convert from/to object to _JSON_. There is no _JSON-B_ spec. Most providers implements their own system for converting _POJOs_ into required internet type, but you can also converting entities by your own code.
+<5> Finally instead of returning a list of books alone, a list of books among with an _HTTP_ 200 code is returned.
+
+Then we can access this resource in `http://<host>:<port>/<application>/book`.
+
+[[JSON-B]]
+[TIP]
+====
+*JAVA EE 8* will face the problem of standarizing the _JSON Binding_ problem. Since that point you can use the method provided by _JAX-RS_ provider, or you can implement your own.
+
+What _JAX-RS_ specification provides is an standard way to deal with binding by providing a standard interface to be implemented for converting '`string`' content into object and viceversa.
+It is important to know exactly which library uses _JAX-RS_ for binding _JSON_.
+If this library fits your requirements, then go ahead with it but keep in mind that you are loosing portability across vendors.
+If you want to use another library or you need to maintain portability then use the standard annotations to implement your own method.
+====
+
+One way to pass parameters to REST endpoints is by specifying _URI_ path parameter.
+In previous example there was no parameters so all books were returned.
+In next example we are going to pass book id of required book, so instead or returning a list of books, a single book is returned.
+
+[source, java]
+.BookResource
+----
+@Path("/book")
+public class BookResource {
+
+  @GET
+  @Path("{bookId}") // <1> <2>
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response book(@PathParam("bookId") String bookId) { // <3>
+
+    Book book = findBookById(bookId); // <4>
+
+    if(book != null) {
+      return Response.ok(book).build();
+    } else {
+      return Response.status(Status.NOT_FOUND).build(); // <5>
+    }
+
+  }
+}
+----
+<1> `@Path` annotation can be used in a method as well. It simply adds a new path to the path defined at class level.
+<2> _URI_ path templates are variables denoted by curly braces. At runtime this template is substituted by real value.
+<3> To get path template in method `@PathParam` annotation is used passing the template name.
+<4> Value is set to variable and can be used directly without any transformation.
+<5> In case of _book_ not found an _HTTP_ 404 code response is sent back. More information about exception handling in next sections.
+
+We can access this resource in `http://<host>:<port>/<application>/book/123`.
+
+[TIP]
+====
+Caller can add any _URL_ valid character as path parameter.
+In most cases the path parameter will be an integer or a it will contain a well-known pattern.
+To protect your endpoints you can set a regular expression on path template.
+
+[source, java]
+.BookResource
+----
+@Path("/book")
+public class BookResource {
+
+  @GET
+  @Path("{bookId: [0-9]+}") // <1>
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response book(@PathParam("bookId") String bookId) {
+
+    Book book = findBookById(bookId);
+
+    if(book != null) {
+      return Response.ok(book).build();
+    } else {
+      return Response.status(Status.NOT_FOUND).build();
+    }
+
+  }
+}
+----
+<1> The way to add a regular expression is by adding the name of the path param and the regular expression separated by colon '`:`'.
+
+
+Resource in `http://<host>:<port>/<application>/book/123` will work but `http://<host>:<port>/<application>/book/123` returns an _HTTP_ 404 code error.
+====
+
+== Extracting request parameters
+
+In <<@Path>> we have seen that we can pass path parameters and extract them using `@PathParam`.
+But there are other ways to send parameters in RESTful Web Services:
+
+@PathParam:: Extracts parameters from _URL_ path.
+@QueryParam:: Extracts parameters from query path.
+@FormParam:: Extracts parameters from a request of _MIME_ media type `application/x-www-form-urlencoded`.
+@MatrixParam:: Extracts parameters from an _HTTP_ matrix parameters. Matrix parameters are a set of `name=value` in _URL_ path separated by semicolon '`;`'.
+@HeaderParam:: Extracts parameters from _HTTP_ header.
+@CookieParam:: Exrtacts parameters from a _cookie_.
+
+TIP: Avoid using `@FormParam` because you are tighten endpoint with presentation layer. Also prefer using `@QueryParam` in front of `@MatrixParam`.
+
+[NOTE]
+====
+All previous ways of extracting parameters from a request (`@PathParam`, `@FormParam`, `@QueryParam` ...) can be preceded by `@DefaultValue` annotation.
+This annotation sets the default value in case a parameter is not provided.
+
+[source, java]
+.BookResource
+----
+@GET
+public String books(@DefaultValue("100") @QueryParam("price")int maxResults) {
+  return ...;
+}
+----
+====
+
+=== @QueryParam
+
+`@QueryParam` extracts parameters from query path.
+Query is an optional part separated from path with a question mark '`?`' and contains pairs of key/value separated by semicolon `';'`.
+
+[source, java]
+.BookResource
+----
+@Path("/book")
+public class BookResource {
+
+  @GET
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response books(@QueryParam("orderBy")String field) { // <1> <2>
+    List<Book> books = findAllBooksOrderedBy(field);
+    return Response.ok(books).build();
+  }
+}
+----
+<1> `@QueryParam` is used in the same way as `@PathParam`.
+<2> In case of no query param provided, the endpoint is called as well but a *null* value is set in parameter.
+
+We can access this resource in `http://<host>:<port>/<application>/book?orderBy=name`.
+
+=== @HeaderParam
+
+`@HeaderParam` extracts parameters from _HTTP_ header.
+
+[source, java]
+.BookResource
+----
+@Path("/book")
+public class BookResource {
+
+  @GET
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response books(@HeaderParam("user-agent")String userAgent) {
+    //..
+  }
+}
+----
+
+=== @CookieParam
+
+`@CookieParam` exrtacts parameters from a _cookie_.
+
+[source, java]
+.BookResource
+----
+@Path("/book")
+public class BookResource {
+
+  @GET
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response books(@CookieParam("Last-Accessed")String lastAccessed) {
+    //..
+  }
+}
+----
+
+== HTTP methods
+
+In all previous examples _GET_ method has been used as a preferred _HTTP_ method.
+But you can use any other _HTTP_ method like _POST_ for creating resources, _PUT_ for updating resources or _DELETE_ for deleteing resources.
+
+=== Creating a resource
+
+To create a resource we must use the _POST_ _HTTP_ method with `@POST` annotation.
+
+[source, java]
+.BookResource
+----
+@Path("/book")
+public class BookResource {
+
+  @POST // <1>
+  @Consumes(MediaType.APPLICATION_JSON) // <2>
+  public Response createBook(String jsonBook) { // <3>
+    Book book = fromJson(jsonBook); // <4>
+    book = insertBook(book);
+
+    return Response.created(URI.create("/"+book.getId())).build(); // <5>
+  }
+}
+----
+<1> This method is executed when request is of type _POST_.
+<2> This method consumes content instead of producing it. For this reason we must set which media type is consumed by the service.
+<3> _JSON_ payload is set as '`string`'.
+<4> As mentioned in <<JSON-B, JSON section>> there is no specification about how to bind an object from/to _JSON_. You can implement your own provider or you can leave this responsability to _JAX-RS_ default provider.
+<5> Creation implies to assign an id to a resource. This id must be returned as _HTTP_ header parameter named `Location` and _HTTP_ 201 status code.
+
+=== Updating a resource
+
+To update a resource we must use the _PUT_ _HTTP_ method with `@PUT` annotation.
+
+[source, java]
+.BookResource
+----
+@Path("/book")
+public class BookResource {
+
+  @PUT // <1>
+  @Path("{bookId: [0-9]+}")
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response updateBook(@PathParam("bookId") String bookId, String jsonBook) {
+    Book book = fromJson(jsonBook);
+    book = updateBook(book);
+
+    return Response.noContent().build(); // <2>
+  }
+}
+----
+<1> This method is executed when request is of type _PUT_.
+<2> When an update is produced a no content _HTTP_ code should be returned.
+
+=== Deleting a resource
+
+To delete a resource we must use the _DELETE_ _HTTP_ method with `@DELETE` annotation.
+
+[source, java]
+.BookResource
+----
+@Path("/book")
+public class BookResource {
+
+  @PUT // <1>
+  @Path("{bookId: [0-9]+}")
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response deleteBook(@PathParam("bookId") String bookId) {
+    //delete
+
+    return Response.noContent().build(); // <2>
+  }
+}
+----
+<1> This method is executed when request is of type _DELETE_.
+<2> When an update is produced a no content _HTTP_ code should be returned.
+
+== Content Negotiation
+
+RESTful Web Services can consume and produce different media type like _JSON_, _XML_ or any other valid type like plain text or binary.
+
+_JAX-RS_ provides `@Consumes` and `@Produces` annotations to set which media type are consumed by the service or produced to the client.
+In all previous examples _application/json_ media type has been used, but different kind of type can be used as well.
+Next list provides a quick overview of the Java types that are supported with respect to media type.
+
+* All media types (\*/*)
+** byte[]
+** java.lang.String
+** java.io.Reader (inbound)
+** java.io.File
+** javax.activation.DataSource
+** javax.ws.rs.core.StreamingOutput (outbound)
+* XML media types (text/xml, application/xml and application/...+xml)
+** javax.xml.transform.Source
+** javax.xml.bind.JAXBElement
+** Application supplied JAXB classes (types annotated with @XmlRootElement or@XmlType)
+* JSON media types (text/json, application/json) footnote:[You need to provide the binding library or rely on the one provided by _JAX-RS_ provider.]
+** javax.xml.transform.Source
+** javax.xml.bind.JAXBElement
+** Application supplied JAXB classes (types annotated with @XmlRootElement or@XmlType)
+* Form content (application/x-www-form-urlencoded)
+** MultivaluedMap<String,String>
+* Plain text (text/plain)
+** java.lang.Boolean
+** java.lang.Character
+** java.lang.Number
+
+== Errors
+
+RESTful Web Services can fail because of different situations.
+Some of them can be business errors thrown by our process, and others can be errors generated by a third-party library or because of structure problems.
+
+=== Response
+
+Exceptions in _JAX-RS_ are propagated through _HTTP_ response codes as explained in <<Response Codes>> section.
+_JAX-RS_ defines `javax.ws.rs.core.Response` class to create response code and sent back to the client.
+
+[source, java]
+.BookResource.java
+----
+@GET
+@Produces(MediaType.APPLICATION_JSON)
+public Response book(@PathParam("bookId") String bookId) {
+
+  Book book = findBookById(bookId);
+
+  if (book != null) {
+    return Response.ok(book).build();
+  } else {
+    return Response.status(Status.NOT_FOUND).build(); // <1>
+  }
+}
+----
+<1> Because element is not found an _HTTP_ 404 error code is thrown to the client.
+
+That's right for almost all cases, but what's happening if `findBookById` instead of returning a null value, it would return an un/checked exception?
+
+=== Exceptions
+
+Probably the first thing we could do is wrapping code between a `try/catch` instruction and in catch section add the `Response` call.
+
+But _JAX-RS_ defines `javax.ws.rs.ext.ExceptionMapper` to map any exception (checked or not) to an _HTTP_ response code.
+So if the exception is thrown, transparently to the developer, this exception is transformed to _HTTP_ response code and sent back to client.
+This class is automatically discovered byt the _JAX-RS_ runtime during provider scanning phase.
+
+[source, java]
+.PersistenceExceptionMapper.java
+----
+import javax.ws.rs.ext.Provider;
+import javax.persistence.PersistenceException;
+
+@Provider // <1>
+public class PersistenceExceptionMapper implements ExceptionMapper<PersistenceException> {
+
+  @Override
+  public Response toResponse(PersistenceException exception) { // <2>
+    return Response.status(Status.INTERNAL_SERVER_ERROR)
+          .entity(exception.getMessage()).type("text/plain").build(); // <3>
+  }
+}
+----
+<1> Mapper should be annotated with +@Provider+ annotation.
+<2> +toResponse+ method builds the response to be sent back to caller.
+<3> Along with _HTTP_ code, a message about the error is also returned.
+
+== Custom Entity Providers
+
+As we have seen in all previous examples, _JAX-RS_ does not define a way on how to bind an object to its _JSON_ representation and viceversa.
+As mentioned this binding can be done by using the one provided by _JAX-RS_ implementation.
+For example _Apache CXF_ provides _Jettison_.
+If we choose this approach the application would become not portable across providers, but also we could feel more comfortable with other binder like _Gson_ or _Jackson_.
+
+To make binders portable, _JAX-RS_ defines `javax.ws.rs.ext.MessageBodyWrite` interface to map an object to _JSON_ and `javax.ws.rs.ext.MessageBodyReader` to map a _JSON_ document to object.
+
+Let's see an example of binder which uses _Gson_ as mapper.
+
+.About Gson
+****
+_Gson_ is a java library that can be used to convert java objects into their _JSON_ representation.
+It can also be used to convert a _JSON_ string to an equivalent java object.
+_Gson_ can work with arbitrary java objects including pre-existing objects that you do not have source-code of.
+****
+
+[source, java]
+.GsonMessageBodyWriter.java
+----
+@Provider // <1>
+@Produces("application/json") // <2>
+public class GsonMessageBodyWriter implements MessageBodyWriter<Object> {
+
+  private Gson gson = new Gson();
+
+  @Override
+  public long getSize(Object object, Class<?> clazz, Type type, Annotation[] annotations,
+      MediaType mediaType) {
+    return -1; // <3>
+  }
+
+  @Override
+  public boolean isWriteable(Class<?> clazz, Type type, Annotation[] annotations,
+      MediaType mediaType) {
+    return true; // <4>
+  }
+
+  @Override
+  public void writeTo(Object object, Class<?> clazz, Type type, Annotation[] annotations,
+      MediaType mediaType, MultivaluedMap<String, Object> multivaluedMap,
+      OutputStream outputStream) throws IOException {
+    String json = gson.toJson(object);
+    outputStream.write(json.getBytes()); // <5>
+  }
+}
+----
+<1> Marks an implementation of an extension interface that should be discoverable by _JAX-RS_ runtime during a provider scanning phase.
+<2> +@Produces+ sets which media type should enable this writer.
+<3> If size of return message cannot be calculated a -1 should be returned.
+<4> Sets which kind of objects can be converted using this writer. In this case all of them.
+<5> _gson_ serializes object.
+
+And inverse operation:
+
+[source, java]
+.GsonMessageBodyReader.java
+----
+@Provider
+@Consumes("application/json") // <1>
+public class GsonMessageBodyReader implements MessageBodyReader<Object> {
+
+  private Gson gson = new Gson();
+
+  @Override
+  public boolean isReadable(Class<?> clazz, Type type, Annotation[] annotations,
+      MediaType mediaType) {
+    return true;
+  }
+
+  @Override
+  public Object readFrom(Class<Object> clazz, Type type, Annotation[] arguments,
+      MediaType mediaType, MultivaluedMap<String, String> multivaluedMap,
+      InputStream inputStream) throws IOException {
+    return gson.fromJson(new InputStreamReader(inputStream), type); // <2>
+  }
+}
+----
+<1> +@Consumes+ is used instead of +@Produces+.
+<2> Input stream is converted to required object.
+
+These class is automatically discovered byt the _JAX-RS_ runtime during provider scanning phase because both of them are annotated with `@Provider`.
+
+NOTE: A single object implementing both interfaces are the common pattern followed in this cases.
+
+[IMPORTANT]
+====
+_Jackson_ mapper has one artifact which implements a _JAX-RS_ provider.
+So if you want to use _Jackson_ as mapper you don't need to implement it by yourself but just adding a new dependency in your `pom.xml` file or copying manually the required artifacts into `WEB-INF/lib`.
+
+[source, xml]
+.pom.xml
+----
+<dependency>
+  <groupId>com.fasterxml.jackson.jaxrs</groupId>
+  <artifactId>jackson-jaxrs-json-provider</artifactId>
+  <version>2.4.3</version>
+</dependency>
+----
+====
+
+== Packaging and Deployment
+
+_JAX-RS_ applications can be packaged and deployed using different three different approaches:
+
+`Application` subclass:: Use a class that extends `javax.ws.rs.core.Application` to define the components of a Restful Web Services and provide additional metadata.
+`Servlet`:: Update the `web.xml` deployment descriptor to configure a servlet as dispatcher for RESTful Web Services.
+Default:: If you don't configure anything, RESTful Web Services are deployed as defined in classes. An scanning classpath fiding resources are done.
+
+NOTE: In all our previous examples *Default* method has been used.
+
+=== Application
+
+Use a class that extends `javax.ws.rs.core.Application` to define the components of a Restful Web Services and provide additional metadata.
+Metadata may include a common base _URI_ for endopints or for example defining which endpoints should be mapped within specified prefix.
+
+In next example `BookResource` endpoint is going to be registered using `javax.ws.rs.core.Application`.
+
+[source, java]
+.BookResource.java
+----
+@Path("/book")
+public class BookResource {
+    //....
+}
+----
+
+[source, java]
+.BookApplication.java
+----
+import javax.ws.rs.core.Application;
+import javax.ws.rs.ApplicationPath;
+
+@ApplicationPath("public") // <1>
+public class BookApplication extends Application {
+
+  public Set<Class<?>> getClasses() {
+    Set<Class<?>> s = new HashSet<Class<?>>();
+    s.add(BookApplication.class); // <2>
+    return s;
+  }
+}
+----
+<1> `@ApplicationPath` adds a base _URI_ to all components registered inside this application. In this case _public_.
+<2> `BookResource` class is registered within current application.
+
+Now instead of accessing the resource through `http://<host>:<port>/<application>/book`, we need to go to `http://<host>:<port>/<application>/public/book`.
+
+For simple deployments, no `web.xml` deployment descriptor is required.
+For more complex deployments, for example to secure the Web service or specify initialization parameters, you can package a `web.xml` deployment descriptor with your application.
+
+=== Servlet
+
+By default `javax.ws.rs.core.Application` classes are self-discovered during classpath scanning phase.
+But in case you need to add custom parameters from `web.xml` to `javax.ws.rs.core.Application`, the class must be registered within the file.
+
+[source, xml]
+.web.xml
+----
+<web-app>
+  <servlet>
+    <display-name>BookApplication Servlet</display-name>
+    <servlet-name>BookApplication</servlet-name>
+    <init-param>
+      <param-name>javax.ws.rs.Application</param-name>
+      <param-value>myPackage.BookApplication</param-value>
+    </init-param>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>BookApplication</servlet-name>
+    <url-pattern>/*</url-pattern>
+  </servlet-mapping>
+</web-app>
+----
+
+=== Default
+
+By default all resources annotated with `@Path` or extending `javax.ws.rs.Application` are auto-discovered when they are at classpath.
+This is the default behaviour and the most used.
+
+[TIP]
+====
+If application that is being developed contains a single (or two) resources it is not necessary to register them as `javax.ws.rs.Application`, but on other cases, the best approach is defining them inside it so you can have an overall picture of all REST endpoints.
+Most of the times you don't need to do anything with `web.xml` so rely on scanning process.
+
+One important point is to put `javax.ws.rs.Application` in standard place so anyone can take a quick overview of which resources compose our application and their implementatin.
+For this reason a common place to put `javax.ws.rs.Application` class is in `rs` package.
+So a valid package is `com.scytl.govlab.rs`.
+
+
+icon:folder-open-o[] Credential Manager +
+{nbsp}{nbsp}{nbsp}{nbsp}icon:th-large[] com.scytl.credentialmanager.rs +
+{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}icon:file-o[] CredentialManagerResources.java +
+{nbsp}{nbsp}{nbsp}{nbsp}icon:th-large[] com.scytl.credentialmanager.credential.boundary +
+{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}icon:file-o[] CredentialResource.java +
+{nbsp}{nbsp}{nbsp}{nbsp}icon:th-large[] com.scytl.credentialmanager.credential.entity +
+{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}icon:file-o[] Credential.java +
+====
+
+== Advanced
+
+=== Sub-resource locator
+
+Resource classes can partially process a request and then provide another sub-resource object to process the remainder of the request.
+This approach can be used in different situations, but one situation that fits pretty well is to deal with "`M to 1`" relationships.
+
+Resource methods with a `@Path` annotation and no _HTTP_ method are considered sub-resource locators and they provide an object that can process the request.
+
+Let's see an example.
+In previous examples we have worked with _Book_ entity which can be something like:
+
+[source, java]
+.Book.java
+----
+public class Book {
+
+  private long id;
+  private String title;
+
+  public Book(long id, String title) {
+    this.title = title;
+    this.id = id;
+  }
+
+  public String getTitle() {return title;}
+  public int getId() {return 1;}
+}
+----
+
+And when `GET /book/12` is executed, the _book_ with _id_ 12 is returned.
+
+But let's add a _Chapter_ entity and how it is related with _Book_.
+
+[source, java]
+.Chapter.java
+----
+public class Chapter {
+
+  private long id;
+  private String title;
+  private String content;
+
+  private Book book;
+
+  public Chapter(long id, String title, String content, Book book) {
+    this.id = id;
+    this.title = title;
+    this.content = content;
+    this.book = book;
+  }
+
+  public long getId() { return id; }
+  public String getTitle() { return title; }
+  public String getContent() { return content; }
+  public Book getBook() { return book; }
+}
+----
+
+One book contains one or more chapters.
+So new _book_ entity should be modified to:
+
+[source, java]
+.Book.java
+----
+public class Book {
+
+  private long id;
+  private String title;
+
+  private List<Chapter> chapters = new ArrayList<Chapter>();
+
+  public Book(long id, String title) {
+    this.title = title;
+    this.id = id;
+  }
+
+  public void addChapter(Chapter chapter) { this.chapters.add(chapter); }
+  public List<Chapter> getChapters() { return chapters; }
+  public String getTitle() { return title; }
+  public long getId() { return id; }
+}
+----
+
+To return all _chapters_ given _book_, you can do something like:
+
+[source, java]
+.BookResource.java
+----
+@Path("/book")
+public class BookResource {
+
+  @GET
+  @Path("{bookId: [0-9]+}/chapter")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response chapters(@PathParam("bookId")Long bookId) {
+    Book book = findBookById(bookId);
+    return Response.ok(book.getChapters()).build(); //<1>
+
+}
+----
+<1> List of chapters are returned from `BookResource` class.
+
+We can access this resource in `http://<host>:<port>/<application>/book/123/chapter` and the list of chapters will be returned.
+
+No secret here and no *sub resources* involved yet.
+But note that we are mixing _books_ with _chapters_ in same endpoint.
+It is better to maintain classes as simple as possible, and more important doing the work they was designed for, in case of `BookResource` it is dealing with books and not chapters.
+
+So one way is make `Book` as *sub resource*. Thanks of subresources, all RESTful endpoint matching releated with returning a list of chapters will be delegated to `Book`.
+Because `Book` is responsible of knowing that it contains a list of chapters, it should be the responsible of returning them as well.
+Let's see how to do it in _JAX-RS_.
+
+**
+
+=== Versioning
+
+=== PATCH and JAX-RS
