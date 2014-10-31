@@ -26,3 +26,4 @@ include::{chapters}/jaxrs.adoc[leveloffset=+1]
 - [[[bennadel]]] Ben Nadel. HTTP Status Code For Invalid Data: 400 vs 422. http://www.bennadel.com/blog/2434-http-status-codes-for-invalid-data-400-vs-422.htm
 - [[[rfc4918]]] Dusseault. RFC - 4918. http://tools.ietf.org/html/rfc4918
 - [[[githubdev]]] Github. Github Dev. https://developer.github.com/v3/#client-errors
+- [[[uber]]] Uber - Uber Dev. https://developer.uber.com/v1/endpoints/

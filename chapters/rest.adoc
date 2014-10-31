@@ -251,12 +251,18 @@ a|Used when the service is under maintainance or busy
 
 [NOTE]
 ====
-Most of this error codes are provided by default by container so we don't have to worry about them.
+Most of these codes are provided by default by container so we don't have to worry about them.
 The most used response codes are '`2XX`', '`5XX`' and some '`4XX`'.
 ====
 
+=== Error Codes
+
 In case of error codes, a _JSON_ document can be sent back with information about the failure.
-If a _JSON_ document is sent to explain the reason of the failure, it must follow next schema.
+RESTful Web Service uses _HTTP_ error codes to notify them to caller.
+Error codes are those starting with '`4XX`' or '`5XX`'.
+
+When an error is sent to caller, it can contain a _JSON_ document as response body.
+If a _JSON_ document is sent to explain the reason of the failure, it must follow next schema:
 
 [source, json]
 ----
@@ -264,14 +270,18 @@ If a _JSON_ document is sent to explain the reason of the failure, it must follo
   "message": "Validation Failed", //<1>
   "errors": [ //<2>
     {
-      "resource": "Issue", //<3>
+      "resource": "Book", //<3>
       "field": "title", //<4>
-      "code": "Title field is mandatory" //<5>
+      "code": "field_mandatory" //<5>
     }
   ]
 }
 ----
-
+<1> Generic message explaining the error that has occured. This field is *mandatory*.
+<2> List of specific errors. This section is *optional* and it _may_ be used when there are field validation errors. This subdocument has sense when an _HTTP 422_ is sent back.
+<3> Name of the resource that contains the error.
+<4> Field with the error.
+<5> Code that represents the error. Frontend is the responsible of translating this code the user message in the configured locale.
 
 [IMPORTANT]
 ====
@@ -308,34 +318,24 @@ In Scytl we implement pagination using next approach.
   ],
 
   "pagination": { //<2>
-    "size": 100, //<3>
+    "limit": 100, //<3>
     "offset": 0, //<4>
-    "lastPage": true, //<5>
-    "totalElements": 2, //<6>
-    "pageNumber": 1, //<7>
-    "lastPageNumber": 1, //<8>
-    "firstPage": true, //<9>
-    "numberOfElements": 2 //<10>
+    "count": 2, //<5>
   },
-  "sort": { //<11>
-    "orderDirection": "ASC", //<12>
-    "orderFieldName": "id" //<13>
+  "sort": { //<6>
+    "orderDirection": "ASC", //<7>
+    "orderFieldName": "id" //<8>
   }
 }
 ----
 <1> `entities` section adds all elements to be shown in current page.
 <2> `pagination` is the parent element for all pagination elements.
-<3> `size` is the max number of elements per page.
+<3> `limit` is the number of elements per page to retrieve.
 <4> `offset` sets the current page (or offset). It is zero-based.
-<5> `lastPage` is a boolean that sets if it is the last page or not.
-<6> `totalElements` is the total number of elements that would be shown if no pagination was set.
-<7>  Current page number.
-<8>  Number of last page.
-<9> `firstPage` is a boolean that sets if it is in the first page or not.
-<10> Number of elements inside current page.
-<11> `sort` is the parent element for all sort parameters if elements are ordered..
-<12> Direction of the order. _ASC_ for ascendant and _DESC_ for descendant.
-<13> Ordered field.
+<5> `count` is the total number of items available.
+<6> `sort` is the parent element for all sort parameters if elements are ordered..
+<7> Direction of the order. _ASC_ for ascendant and _DESC_ for descendant.
+<8> Ordered field name.
 
 NOTE: Obviously Time-based pagination is not always possible, it will depend on the resource nature.
 
