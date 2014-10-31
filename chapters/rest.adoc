@@ -172,6 +172,7 @@ There are two different approaches:
 
 TIP: Use _HTTP_ headers approach instead of _URL_ patterns because _HTTP_ headers provide a clear separation between infrastructure and business.
 
+[[versioning-rest]]
 == Versioning
 
 Probably RESTful _API_ will evolve during its lifetime.

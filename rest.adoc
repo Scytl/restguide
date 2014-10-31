@@ -10,11 +10,13 @@ v1.0, October 22, 2014: First release
 :imagesdir: ./images
 :chapters: chapters
 
+include::{chapters}/json.adoc[leveloffset=+1]
 include::{chapters}/rest.adoc[leveloffset=+1]
 include::{chapters}/raml.adoc[leveloffset=+1]
 include::{chapters}/jaxrs.adoc[leveloffset=+1]
 
 
+:numbered!:
 == Bibliography
 
 [bibliography]
@@ -27,3 +29,6 @@ include::{chapters}/jaxrs.adoc[leveloffset=+1]
 - [[[rfc4918]]] Dusseault. RFC - 4918. http://tools.ietf.org/html/rfc4918
 - [[[githubdev]]] Github. Github Dev. https://developer.github.com/v3/#client-errors
 - [[[uber]]] Uber - Uber Dev. https://developer.uber.com/v1/endpoints/
+
+[appendix]
+== JAX-RS Full Example

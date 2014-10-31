@@ -673,7 +673,7 @@ public class Book {
 }
 ----
 
-To return all _chapters_ given _book_, you can do something like:
+To return all _chapters_ of given _book_, you can do something like:
 
 [source, java]
 .BookResource.java
@@ -696,14 +696,80 @@ We can access this resource in `http://<host>:<port>/<application>/book/123/chap
 
 No secret here and no *sub resources* involved yet.
 But note that we are mixing _books_ with _chapters_ in same endpoint.
-It is better to maintain classes as simple as possible, and more important doing the work they was designed for, in case of `BookResource` it is dealing with books and not chapters.
+It is better to maintain classes as simple as possible, and more important doing the work they were designed for, in case of `BookResource` it is dealing with books and not chapters.
 
-So one way is make `Book` as *sub resource*. Thanks of subresources, all RESTful endpoint matching releated with returning a list of chapters will be delegated to `Book`.
+So one way is make `Book` as *sub resource*.
+Thanks of subresources, all RESTful endpoint matching releated with returning a list of chapters will be delegated to `Book` itself.
 Because `Book` is responsible of knowing that it contains a list of chapters, it should be the responsible of returning them as well.
 Let's see how to do it in _JAX-RS_.
 
-**
+First thing to do is set that `chapters` method from `BookResource` returns a subresource instead of a resource.
+This is accomplished by removing _HTTP_ method annotation.
+
+[source, java]
+.BookResource.java
+----
+@Path("/book")
+public class BookResource {
+
+  @Path("{bookId: [0-9]+}") //<1> <2>
+  public Book chapters(@PathParam("bookId")Long bookId) {
+
+    Book book = findBookById(bookId);
+    return book; //<3>
+  }
+}
+----
+<1> Only path realated with book is set.
+<2> No _HTTP_ method annotation is present.
+<3> Finally we return the subresource.
+
+And next step is define that `Book` is a subresource and must contains the path part not set in `BookResource`.
+
+[source, java]
+.Book.java
+----
+public class Book {
+
+  private long id;
+  private String title;
+
+  private List<Chapter> chapters = new ArrayList<Chapter>();
+
+  public Book() {
+  }
+
+  public Book(long id, String title) {
+    this.title = title;
+    this.id = id;
+  }
+
+  public void addChapter(Chapter chapter) {
+    this.chapters.add(chapter);
+  }
+
+  @GET //<1>
+  @Produces(MediaType.APPLICATION_JSON)
+  @Path("/chapter") //<2>
+  public List<Chapter> getChapters() {
+    return chapters; //<3>
+  }
+}
+----
+<1> _HTTP_ method is set so this method returns a full resource.
+<2> `@Path` sets the subresource path.
+<3> Returns a list of all chapters.
+
+We can access this resource in `http://<host>:<port>/<application>/book/123/chapter` and the list of chapters will be returned.
+But now the code will do next steps.
+First of all it will run `http://<host>:<port>/<application>/book/123` in `BookResource`.
+Because it returns a subresource, the engine will continue inspecting the left part of the _URI_, in this case `/chapters`, through returned subresource.
+So it will find that `Book` class contains a method annotated with `@Path("/chapter")`, and because it matches, the method will be executed by returning a list of chapters.
+
+TIP: You can use the same approach to return single attribute in case client needs to access them from your _REST_ API. It is not necessary to use suubresources only in case of _Collections_.
 
 === Versioning
+
+As seen in <<versioning-rest, REST versioning>> 
 
 === PATCH and JAX-RS
