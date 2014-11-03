@@ -815,7 +815,7 @@ public class ChapterResourceV1 {
 ----
 
 And then a second version of the _API_ is developed.
-What we need to do is create a new dispatcher sub-resource for version 2.
+What we need to do is create a new application for version 2.
 
 [source, java]
 .V2Application.java
