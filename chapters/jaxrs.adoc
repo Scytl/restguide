@@ -381,13 +381,13 @@ public class PersistenceExceptionMapper implements ExceptionMapper<PersistenceEx
   @Override
   public Response toResponse(PersistenceException exception) { // <2>
     return Response.status(Status.INTERNAL_SERVER_ERROR)
-          .entity(exception.getMessage()).type("text/plain").build(); // <3>
+          .entity(createErrorMessage(exception.getMessage())).type("application/json").build(); // <3>
   }
 }
 ----
 <1> Mapper should be annotated with +@Provider+ annotation.
 <2> +toResponse+ method builds the response to be sent back to caller.
-<3> Along with _HTTP_ code, a message about the error is also returned.
+<3> Along with _HTTP_ code, a message about the error is also returned following <<Error Codes, error nomenclature>>.
 
 == Custom Entity Providers
 
@@ -763,13 +763,81 @@ public class Book {
 We can access this resource in `http://<host>:<port>/<application>/book/123/chapter` and the list of chapters will be returned.
 But now the code will do next steps.
 First of all it will run `http://<host>:<port>/<application>/book/123` in `BookResource`.
-Because it returns a subresource, the engine will continue inspecting the left part of the _URI_, in this case `/chapters`, through returned subresource.
+Because it returns a subresource, the engine will continue inspecting the part not processed of the _URI_, in this case `/chapters`, through returned subresource.
 So it will find that `Book` class contains a method annotated with `@Path("/chapter")`, and because it matches, the method will be executed by returning a list of chapters.
 
-TIP: You can use the same approach to return single attribute in case client needs to access them from your _REST_ API. It is not necessary to use suubresources only in case of _Collections_.
+TIP: You can use the same approach to return single attribute in case client needs to access them from your _REST_ API, for example `/book/title`.
+[TIP]
+====
+In this example the entity class has been used as subresource.
+But if you want to maintain your entity classes anemic, you can create a subresource class such as `BookSubresource` that wraps `Book`.
+====
 
 === Versioning
 
-As seen in <<versioning-rest, REST versioning>> 
+As seen in <<versioning-rest, REST versioning>>, RESTful Web Services are going to be versioned (in case it is necessary) using _URL_ path to set version number of _API_.
+
+Versioning can be implemented following different approaches, but using <<Sub-resource locator>> may be cleaner way to implement it.
+
+Let's suppose we have different resources and we want to give support to two different versions '`v1`' and '`v2`'.
+The first thing to do is create two sub-resources, one for each version.
+The main feature of these sub-resources are dispatching to required business logic.
+
+[source, java]
+.DispatcherResourceV1.java
+----
+@Path("/v1") //<1>
+public class DispatcherResourceV1 {
+
+  @Path("/chapter")
+  public ChapterResourceV1 v1Chapters() { //<2>
+    return new ChapterResourceV1(); //<3>
+  }
+
+  //.. and other resources //<4>
+}
+----
+<1> Version 1 is identified as '`v1`' in _URL_.
+<2> It returns the chapter resource that contains the implementation of version 1.
+<3> Resource is created each time, but you can write a _singleton_ factory or create it as attribute parameter in sub-resource class.
+<4> And the same for all resources available in version 1 of the _API_.
+
+[source, java]
+.ChapterResourceV1.java
+----
+public class ChapterResourceV1 {
+
+  @GET
+  @Path("/") //<1>
+  @Produces(MediaType.APPLICATION_JSON)
+  public Chapter chapter() {
+    return ...;
+  }
+}
+----
+
+And then a second version of the _API_ is developed.
+What we need to do is create a new dispatcher sub-resource for version 2.
+
+[source, java]
+.DispatcherResourceV2.java
+----
+@Path("/v2") //<1>
+public class DispatcherResourceV2 {
+
+  @Path("/chapter")
+  public ChapterResourceV2 v2Chapters() { //<2>
+    return new ChapterResourceV2();
+  }
+
+  //.. and other resources //<3>
+}
+----
+<1> Version 2 is identified as '`v2`' in _URL_.
+<2> Now the second version of the _Chapter_ resource is returned.
+<3> If other resources has not changed you can return the same resource as before.
+
+We can access this resource in `http://<host>:<port>/<application>/v1/chapter` and the list of chapters will be returned using '`v1`' resource.
+Accessing `http://<host>:<port>/<application>/v2/chapter` the list of chapters will be returned as wel but using '`v2`' resource instead.
 
 === PATCH and JAX-RS

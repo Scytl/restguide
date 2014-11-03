@@ -184,7 +184,7 @@ There are several approaches to version _APIs_:
 * Specifying as request parameter. For example `http://server/items/12?version=v2`. Note that in this case version is set as query parameter '`?version=v2`'.
 * Specifying inside _HTTP_ header in `Accept` field or in a custom one. For example `Accept: application/vnd.server.v2+json` accepts the content produced in '`json`' and from '`version 2`'.
 
-TIP: There is no clear approach about versioning. To standarize versioning, we are going to use the first one by setting in _URI_ the version.
+TIP: There is no clear approach about versioning. We are going to use the first one by setting in _URI_ the version of API.
 
 == Response Codes
 
