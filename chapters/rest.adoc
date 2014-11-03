@@ -90,6 +90,7 @@ m|PUT /items/name/Beer
 * Use subresources to refer to resource associations. For example `/users/12/items` to get all items from an specific user.
 * Use query params for specific variations. For example `/users?age=25`. And path params only for identifiers.
 * Add defaults for output format for just in case client does not specify it.
+* Use plural nouns. For example use `/cars` instead of `/car`.
 * _JSON_ document attributes in camel case form.
 * In _PUT_ and _POST_ use body content to send data to be created or updated.
 * By specification _PUT_ is a create or update operation. To avoid confusions _PUT_ should only update resources.
@@ -256,7 +257,7 @@ Most of these codes are provided by default by container so we don't have to wor
 The most used response codes are '`2XX`', '`5XX`' and some '`4XX`'.
 ====
 
-=== Error Codes
+  === Error Codes
 
 In case of error codes, a _JSON_ document can be sent back with information about the failure.
 RESTful Web Service uses _HTTP_ error codes to notify them to caller.

@@ -34,7 +34,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-@Path("/book") // <1>
+@Path("/books") // <1>
 public class BookResource {
 
   @GET // <2>
@@ -47,13 +47,13 @@ public class BookResource {
 
 }
 ----
-<1> `@Path` sets a class as REST endpoint. In this case is bound to `/book`.
+<1> `@Path` sets a class as REST endpoint. In this case is bound to `/books`.
 <2> `@GET` sets which _HTTP_ method is required for executing this method.
 <3> Because of content negotiation, the media type must be set. In this case because method does not receive anything, we only need to configure the return type with `@Produces` annotation.
 <4> _Java EE_ specification does not provide any specific way to convert from/to object to _JSON_. There is no _JSON-B_ spec. Most providers implements their own system for converting _POJOs_ into required internet type, but you can also converting entities by your own code.
 <5> Finally instead of returning a list of books alone, a list of books among with an _HTTP_ 200 code is returned.
 
-Then we can access this resource in `http://<host>:<port>/<application>/book`.
+Then we can access this resource in `http://<host>:<port>/<application>/books`.
 
 [[JSON-B]]
 [TIP]
@@ -73,7 +73,7 @@ In next example we are going to pass book id of required book, so instead or ret
 [source, java]
 .BookResource
 ----
-@Path("/book")
+@Path("/books")
 public class BookResource {
 
   @GET
@@ -98,7 +98,7 @@ public class BookResource {
 <4> Value is set to variable and can be used directly without any transformation.
 <5> In case of _book_ not found an _HTTP_ 404 code response is sent back. More information about exception handling in next sections.
 
-We can access this resource in `http://<host>:<port>/<application>/book/123`.
+We can access this resource in `http://<host>:<port>/<application>/books/123`.
 
 [TIP]
 ====
@@ -109,7 +109,7 @@ To protect your endpoints you can set a regular expression on path template.
 [source, java]
 .BookResource
 ----
-@Path("/book")
+@Path("/books")
 public class BookResource {
 
   @GET
@@ -131,7 +131,7 @@ public class BookResource {
 <1> The way to add a regular expression is by adding the name of the path param and the regular expression separated by colon '`:`'.
 
 
-Resource in `http://<host>:<port>/<application>/book/123` will work but `http://<host>:<port>/<application>/book/123` returns an _HTTP_ 404 code error.
+Resource in `http://<host>:<port>/<application>/books/123` will work but `http://<host>:<port>/<application>/books/123` returns an _HTTP_ 404 code error.
 ====
 
 == Extracting request parameters
@@ -171,7 +171,7 @@ Query is an optional part separated from path with a question mark '`?`' and con
 [source, java]
 .BookResource
 ----
-@Path("/book")
+@Path("/books")
 public class BookResource {
 
   @GET
@@ -185,7 +185,7 @@ public class BookResource {
 <1> `@QueryParam` is used in the same way as `@PathParam`.
 <2> In case of no query param provided, the endpoint is called as well but a *null* value is set in parameter.
 
-We can access this resource in `http://<host>:<port>/<application>/book?orderBy=name`.
+We can access this resource in `http://<host>:<port>/<application>/books?orderBy=name`.
 
 === @HeaderParam
 
@@ -194,7 +194,7 @@ We can access this resource in `http://<host>:<port>/<application>/book?orderBy=
 [source, java]
 .BookResource
 ----
-@Path("/book")
+@Path("/books")
 public class BookResource {
 
   @GET
@@ -212,7 +212,7 @@ public class BookResource {
 [source, java]
 .BookResource
 ----
-@Path("/book")
+@Path("/books")
 public class BookResource {
 
   @GET
@@ -235,7 +235,7 @@ To create a resource we must use the _POST_ _HTTP_ method with `@POST` annotatio
 [source, java]
 .BookResource
 ----
-@Path("/book")
+@Path("/books")
 public class BookResource {
 
   @POST // <1>
@@ -261,7 +261,7 @@ To update a resource we must use the _PUT_ _HTTP_ method with `@PUT` annotation.
 [source, java]
 .BookResource
 ----
-@Path("/book")
+@Path("/books")
 public class BookResource {
 
   @PUT // <1>
@@ -285,7 +285,7 @@ To delete a resource we must use the _DELETE_ _HTTP_ method with `@DELETE` annot
 [source, java]
 .BookResource
 ----
-@Path("/book")
+@Path("/books")
 public class BookResource {
 
   @PUT // <1>
@@ -511,7 +511,7 @@ In next example `BookResource` endpoint is going to be registered using `javax.w
 [source, java]
 .BookResource.java
 ----
-@Path("/book")
+@Path("/books")
 public class BookResource {
     //....
 }
@@ -536,7 +536,7 @@ public class BookApplication extends Application {
 <1> `@ApplicationPath` adds a base _URI_ to all components registered inside this application. In this case _public_.
 <2> `BookResource` class is registered within current application.
 
-Now instead of accessing the resource through `http://<host>:<port>/<application>/book`, we need to go to `http://<host>:<port>/<application>/public/book`.
+Now instead of accessing the resource through `http://<host>:<port>/<application>/books`, we need to go to `http://<host>:<port>/<application>/public/books`.
 
 For simple deployments, no `web.xml` deployment descriptor is required.
 For more complex deployments, for example to secure the Web service or specify initialization parameters, you can package a `web.xml` deployment descriptor with your application.
@@ -678,11 +678,11 @@ To return all _chapters_ of given _book_, you can do something like:
 [source, java]
 .BookResource.java
 ----
-@Path("/book")
+@Path("/books")
 public class BookResource {
 
   @GET
-  @Path("{bookId: [0-9]+}/chapter")
+  @Path("{bookId: [0-9]+}/chapters")
   @Produces(MediaType.APPLICATION_JSON)
   public Response chapters(@PathParam("bookId")Long bookId) {
     Book book = findBookById(bookId);
@@ -692,7 +692,7 @@ public class BookResource {
 ----
 <1> List of chapters are returned from `BookResource` class.
 
-We can access this resource in `http://<host>:<port>/<application>/book/123/chapter` and the list of chapters will be returned.
+We can access this resource in `http://<host>:<port>/<application>/books/123/chapters` and the list of chapters will be returned.
 
 No secret here and no *sub resources* involved yet.
 But note that we are mixing _books_ with _chapters_ in same endpoint.
@@ -709,7 +709,7 @@ This is accomplished by removing _HTTP_ method annotation.
 [source, java]
 .BookResource.java
 ----
-@Path("/book")
+@Path("/books")
 public class BookResource {
 
   @Path("{bookId: [0-9]+}") //<1> <2>
@@ -750,7 +750,7 @@ public class Book {
 
   @GET //<1>
   @Produces(MediaType.APPLICATION_JSON)
-  @Path("/chapter") //<2>
+  @Path("/chapters") //<2>
   public List<Chapter> getChapters() {
     return chapters; //<3>
   }
@@ -760,13 +760,13 @@ public class Book {
 <2> `@Path` sets the subresource path.
 <3> Returns a list of all chapters.
 
-We can access this resource in `http://<host>:<port>/<application>/book/123/chapter` and the list of chapters will be returned.
+We can access this resource in `http://<host>:<port>/<application>/books/123/chapters` and the list of chapters will be returned.
 But now the code will do next steps.
-First of all it will run `http://<host>:<port>/<application>/book/123` in `BookResource`.
+First of all it will run `http://<host>:<port>/<application>/books/123` in `BookResource`.
 Because it returns a subresource, the engine will continue inspecting the part not processed of the _URI_, in this case `/chapters`, through returned subresource.
-So it will find that `Book` class contains a method annotated with `@Path("/chapter")`, and because it matches, the method will be executed by returning a list of chapters.
+So it will find that `Book` class contains a method annotated with `@Path("/chapters")`, and because it matches, the method will be executed by returning a list of chapters.
 
-TIP: You can use the same approach to return single attribute in case client needs to access them from your _REST_ API, for example `/book/title`.
+TIP: You can use the same approach to return single attribute in case client needs to access them from your _REST_ API, for example `/books/title`.
 [TIP]
 ====
 In this example the entity class has been used as subresource.
@@ -777,30 +777,28 @@ But if you want to maintain your entity classes anemic, you can create a subreso
 
 As seen in <<versioning-rest, REST versioning>>, RESTful Web Services are going to be versioned (in case it is necessary) using _URL_ path to set version number of _API_.
 
-Versioning can be implemented following different approaches, but using <<Sub-resource locator>> may be cleaner way to implement it.
+Versioning can be implemented following different approaches, but using <<Application>> may be cleaner way to implement it.
 
 Let's suppose we have different resources and we want to give support to two different versions '`v1`' and '`v2`'.
-The first thing to do is create two sub-resources, one for each version.
-The main feature of these sub-resources are dispatching to required business logic.
+The first thing to do is create two applications, one for each version.
 
 [source, java]
-.DispatcherResourceV1.java
+.V1Application.java
 ----
-@Path("/v1") //<1>
-public class DispatcherResourceV1 {
+@ApplicationPath("/v1") //<1>
+public class V1Application {
 
-  @Path("/chapter")
-  public ChapterResourceV1 v1Chapters() { //<2>
-    return new ChapterResourceV1(); //<3>
-  }
-
-  //.. and other resources //<4>
+  @Override
+  public Set<Class<?>> getClasses() {
+    Set<Class<?>> s = new HashSet<Class<?>>();
+    s.add(ChapterResourceV1.class); // <2> <3>
+    return s;
+    }
 }
 ----
 <1> Version 1 is identified as '`v1`' in _URL_.
-<2> It returns the chapter resource that contains the implementation of version 1.
-<3> Resource is created each time, but you can write a _singleton_ factory or create it as attribute parameter in sub-resource class.
-<4> And the same for all resources available in version 1 of the _API_.
+<2> It registers the _Chapter_ resource that contains the implementation of version 1.
+<3> And the same for all resources available in version 1 of the _API_.
 
 [source, java]
 .ChapterResourceV1.java
@@ -820,22 +818,20 @@ And then a second version of the _API_ is developed.
 What we need to do is create a new dispatcher sub-resource for version 2.
 
 [source, java]
-.DispatcherResourceV2.java
+.V2Application.java
 ----
-@Path("/v2") //<1>
-public class DispatcherResourceV2 {
+@ApplicationPath("/v2") //<1>
+public class V2Application {
 
-  @Path("/chapter")
-  public ChapterResourceV2 v2Chapters() { //<2>
-    return new ChapterResourceV2();
-  }
-
-  //.. and other resources //<3>
+  @Override
+  public Set<Class<?>> getClasses() {
+    Set<Class<?>> s = new HashSet<Class<?>>();
+    s.add(ChapterResourceV2.class);
+    return s;
+    }
 }
 ----
 <1> Version 2 is identified as '`v2`' in _URL_.
-<2> Now the second version of the _Chapter_ resource is returned.
-<3> If other resources has not changed you can return the same resource as before.
 
 We can access this resource in `http://<host>:<port>/<application>/v1/chapter` and the list of chapters will be returned using '`v1`' resource.
 Accessing `http://<host>:<port>/<application>/v2/chapter` the list of chapters will be returned as wel but using '`v2`' resource instead.
