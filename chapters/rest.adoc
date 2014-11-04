@@ -257,7 +257,7 @@ Most of these codes are provided by default by container so we don't have to wor
 The most used response codes are '`2XX`', '`5XX`' and some '`4XX`'.
 ====
 
-  === Error Codes
+=== Error Codes
 
 In case of error codes, a _JSON_ document can be sent back with information about the failure.
 RESTful Web Service uses _HTTP_ error codes to notify them to caller.
@@ -365,6 +365,33 @@ TIP: Use _HTTP_ headers approach instead of query parameter approach because _HT
 
 IMPORTANT: Any internacionalized response should set `Content-Language` _HTTP_ header in response as well.
 
+== Existance checks
+
+From prespective of frontend, sometimes you may need to check the existance of one resource before creating it.
+For example to notify the problem to the user as soon as possible while filling a form, instead of after '`submit`' action.
+
+As noted at <<headverb>>, *existence checks* are done by using _HEAD_ _HTTP_ method.
+
+[quote, RFC - 2616, Section 9.4]
+The HEAD method is identical to GET except that the server MUST NOT return a message-body in the response. The metainformation contained in the HTTP headers in response to a HEAD request SHOULD be identical to the information sent in response to a GET request. This method can be used for obtaining metainformation about the entity implied by the request without transferring the entity-body itself.
+
+So in cases where the content is not important, but the existance of the resource is, _HEAD_ is the _verb_ to be used.
+We can do everything like a _GET_ and check the response code without the weight of the response body.
+
+For example to know if a user with _login_ attribute (which is unique) is already created, next endpoint can be used:
+
+`HEAD http://<host>/<application>/users?login=johnsmith`
+
+The response may be a:
+
+`200 OK` if the resource already exists
+
+or
+
+`404 OK` in case it has not been created yet.
+
 == REST Polling
+
+
 
 == Security
