@@ -302,7 +302,14 @@ There are two possible approaches:
 * Offset-based pagination which in general uses two query params named `offset` which sets which page to return and is zero-based and `limit` that sets the maximum number of results to be returned. For example `GET items?page=1&limit=50`.
 * Time-based pagination which uses timestamps to paginate results between a specific timeframe. In this case `until` query param is used to point the end of the time range, and `since` for the beginning.
 
-In case client can specify which field can be used for sorting and direction,
+In case client can specify which field is used for sorting and direction, _sort_ query param must be used.
+As value you set an optional character to set the direction of the order, '`+`' for ascending and '`-`' for descending, and finally the field name to sort.
+
+For example `GET /books?sort=+name` for ascending direction or `GET /books?sort=-name` for descending.
+
+TIP: If no direction is provided, ascending direction is the default one.
+
+WARNING: Currently you can only sort elements by single field.
 
 [source, json]
 .Example of Offset-based response
@@ -354,6 +361,16 @@ You can read about real-time pagination in http://www.sitepoint.com/paginating-r
 ====
 
 == Filtering
+
+== Field Selection
+
+Sometimes client just need a few attributes instead of all attributes of a resource.
+In endpoints that client can choose returned fields, a query param named _fields_ must be used.
+And as value a list of comma-separated values of all fields to be returned.
+
+For example `GET /books?fields=name,pages`.
+
+TIP: In case of no _fields_ query param, the whole document should be returned to be compliant with REST _API_.
 
 == Internationalization
 

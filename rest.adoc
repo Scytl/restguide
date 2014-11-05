@@ -36,3 +36,6 @@ include::{chapters}/jaxrs.adoc[leveloffset=+1]
 
 [appendix]
 == JAX-RS Full Example
+
+[appendix]
+== Refcard
