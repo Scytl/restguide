@@ -33,6 +33,7 @@ include::{chapters}/jaxrs.adoc[leveloffset=+1]
 - [[[headverb]]] Jason Harmon - RESTful Patterns for the HEAD verb. http://www.pragmaticapi.com/2013/02/14/restful-patterns-for-the-head-verb/
 - [[[rfc2616]]] Fielding et al. RFC - 2616. https://www.ietf.org/rfc/rfc2616.txt
 - [[[restfulapidesign]]] Geert Jansen. Thoughts on RESTful API Design. http://restful-api-design.readthedocs.org/
+- [[[realtimepagination]]] Rakhitha Nimesh. Paginating Real-Time Data With Cursor Based Pagination. http://www.sitepoint.com/paginating-real-time-data-cursor-based-pagination/
 
 [appendix]
 == JAX-RS Full Example

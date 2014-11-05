@@ -88,7 +88,7 @@ m|PUT /items/name/Beer
 ====
 * Use nouns to navigate through resources. For example `/users/12/items` is better than `/users/12/getItems`.
 * Use subresources to refer to resource associations. For example `/users/12/items` to get all items from an specific user.
-* Use query params for specific variations. For example `/users?age=25`. And path params only for identifiers.
+* Use query params for specific variations and path params only for identifiers. For example `/users?age=25`.
 * Add defaults for output format for just in case client does not specify it.
 * Use plural nouns. For example use `/cars` instead of `/car`.
 * _JSON_ document attributes in camel case form.
@@ -357,10 +357,17 @@ This is something that depending on the number of pace of inserts and updates an
 To avoid this problem a cursor-based pagination can be used.
 Cursor-based pagination is pretty similar to offset approach but uses already known sequencial identifier of entity to know exactly at which point the latest result was returned.
 
-You can read about real-time pagination in http://www.sitepoint.com/paginating-real-time-data-cursor-based-pagination/
+You can read about real-time pagination in <<realtimepagination>>.
 ====
 
 == Filtering
+
+Getting a resource may require some kind of filtering such as returning only resources with specific value.
+In this cases query param with field name and value approach is used.
+
+For example `GET /books?title=Bible`
+
+TIP: You can query by multiple parameters by adding a new query param followed by ampersand ('`&`')
 
 == Field Selection
 
@@ -368,7 +375,7 @@ Sometimes client just need a few attributes instead of all attributes of a resou
 In endpoints that client can choose returned fields, a query param named _fields_ must be used.
 And as value a list of comma-separated values of all fields to be returned.
 
-For example `GET /books?fields=name,pages`.
+For example `GET /books?fields=title,pages`.
 
 TIP: In case of no _fields_ query param, the whole document should be returned to be compliant with REST _API_.
 
