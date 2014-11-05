@@ -302,7 +302,7 @@ There are two possible approaches:
 * Offset-based pagination which in general uses two query params named `offset` which sets which page to return and is zero-based and `limit` that sets the maximum number of results to be returned. For example `GET items?page=1&limit=50`.
 * Time-based pagination which uses timestamps to paginate results between a specific timeframe. In this case `until` query param is used to point the end of the time range, and `since` for the beginning.
 
-In Scytl we implement pagination using next approach.
+In case client can specify which field can be used for sorting and direction,
 
 [source, json]
 .Example of Offset-based response
@@ -339,6 +339,7 @@ In Scytl we implement pagination using next approach.
 <7> Direction of the order. _ASC_ for ascendant and _DESC_ for descendant.
 <8> Ordered field name.
 
+
 NOTE: Obviously Time-based pagination is not always possible, it will depend on the resource nature.
 
 [WARNING]
@@ -351,6 +352,8 @@ Cursor-based pagination is pretty similar to offset approach but uses already kn
 
 You can read about real-time pagination in http://www.sitepoint.com/paginating-real-time-data-cursor-based-pagination/
 ====
+
+== Filtering
 
 == Internationalization
 
@@ -365,7 +368,7 @@ TIP: Use _HTTP_ headers approach instead of query parameter approach because _HT
 
 IMPORTANT: Any internacionalized response should set `Content-Language` _HTTP_ header in response as well.
 
-== Existance checks
+== Existence checks
 
 From prespective of frontend, sometimes you may need to check the existance of one resource before creating it.
 For example to notify the problem to the user as soon as possible while filling a form, instead of after '`submit`' action.
@@ -382,16 +385,92 @@ For example to know if a user with _login_ attribute (which is unique) is alread
 
 `HEAD http://<host>/<application>/users?login=johnsmith`
 
-The response may be a:
-
-`200 OK` if the resource already exists
-
-or
-
-`404 OK` in case it has not been created yet.
+The response may be a `200 OK` if the resource already exists or `404 OK` in case it has not been created yet.
 
 == REST Polling
 
+Sometimes an action takes too long to be completed in the context of a single _HTTP_ request.
+Probably some kind of feedback should be provided to users, for example the number of processed elements, remaining elements or expected time to finish the task.
+Asynchronous actions should only executed for _POST_, _PUT_, _PATCH_ or _DELETE_ _HTTP_ methods.
 
+_HTTP_ protocol provides different ways to implement asynchronous callback action:
+
+WebSockets:: It is a protocol providing full-duplex communications channels over a single TCP connection.
+Server Sent Events (SSE):: Browser receives automatic updates from a server via HTTP connection and Server-Sent Events API.
+Polling:: The client requests information from the server. Polling cycle is the time in which each element is monitored once.
+Long Polling:: The client requests information from the server exactly as in normal polling, but in case of no information, the server side holds the connection until one become available.
+WebHooks:: The source site makes an _HTTP_ request to the _URI_ configured for the webhook for given a given event.
+
+All approaches offer PROs and CONs, but currently the *polling* way is going to be used because of simplification and easier implementation.
+
+When an asynchronous operation is executed, instead of returning for example an _HTTP 201_ status code in case of _POST_ or _HTTP 204_ in case of _PUT_, an _HTTP 202_ code is returned with `Location` header specifying where the client can monitor the request.
+The _HTTP 202_ is returned until defined _HTTP_ status code is returned.
+For example an _HTTP 201_ in case of _POST_ or _HTTP 204_ in case of _PUT_.
+
+Let's see an example of REST polling.
+Creation of a resource may require validation of external services which can take several seconds.
+Some feedback to the users could be provided about what steps are being executed.
+To provide this feedback, client is going to use REST polling to know which step is being executed.
+
+First step is sending a _POST_ to backend `POST http://<localhost>/<application>/books` and it will return a `HTTP 202 OK` with header's attribute `Location` set to `http://<localhost>/<application>/books/<tokenId>`.
+
+Then client can send _GET_ requests to given '`Location`', in this case `http://<localhost>/<application>/books/<tokenId>`, and polling the resource until a status code not equal to _HTTP 202_ is received.
+
+Each time an _HTTP 202_ is returned, a _JSON_ document must be sent in body response with information about the status of the task.
+This document may follow next schema:
+
+[source, json]
+----
+{
+  "processed" : 18, //<1>
+  "of" : 200, //<2>
+  "estimatedTime" : 30 //<3>
+}
+----
+<1> Number of elements that has been processed.
+<2> Total number of elements.
+<3> Optional parameter that sets the time in seconds remaining until all elements are processed.
+
+TIP: `processed` and `of` are integers, but it may contain a null value in case it cannot be calculated.
+
+[ditaa]
+.Protocol Schema
+....
+        +-------------+                     /-------------\                 /-------------\
+        |    Client   |                     |    /books   |                 |  /books/rfa |
+        +-------------+                     \-------------/                 \-------------/
+               |                                   |                                |
+               |         +---------------+         |                                |
+               |---------| POST {content}|-------->|                                |
+               |         +---------------+         |                                |
+               |                                   |                                |
+               |       +-------------------+       |                                |
+               |<------|      HTTP 202     |-------|                                |
+               |       |Location /books/rfa|       |                                |
+               |       +-------------------+       |                                |
+               |                                                                    |
+           +-->|                           +-------------------+                    |
+           |   |---------------------------|        GET        |------------------->|
+           |   |                           +-------------------+                    |
+           |   |                                                                    |
+           |   |                           +-------------------+                    |
+           |   |                           |      HTTP 202     |                    |
+  +----------+ |                           | {                 |                    |
+  | HTTP 202 | |                           |   "processed" : 18|                    |
+  +----------+ |<--------------------------|   "of" : 200,     |------------------->|
+           |   |                           | }                 |                    |
+           |   |                           +-------------+-----+                    |
+           |   |                                                                    |
+           +---|                                                                    |
+               |                                                                    |
+               |                           +-------------------+                    |
+               |---------------------------|        GET        |------------------->|
+               |                           +-------------------+                    |
+               |                                                                    |
+               |                           +-------------------+                    |
+               |                           |      HTTP 201     |                    |
+               |<--------------------------| Location /books/12|--------------------|
+               |                           +-------------------+                    |
+....
 
 == Security

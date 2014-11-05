@@ -9,6 +9,7 @@ v1.0, October 22, 2014: First release
 :numbered:
 :imagesdir: ./images
 :chapters: chapters
+:data-uri:
 
 include::{chapters}/json.adoc[leveloffset=+1]
 include::{chapters}/rest.adoc[leveloffset=+1]
@@ -23,7 +24,7 @@ include::{chapters}/jaxrs.adoc[leveloffset=+1]
 - [[[jaxrs2]]] Bill Burke. RESTful Java with JAX-RS 2.0, 2nd Edition. O'Reilly Media.
 - [[[restfulp]]] Bhakti Mehta. RESTful Java Patterns and Best Practices. Packt.
 - [[[dontpatch]]] William Durand. Please. Don't Patch Like An Idiot. http://williamdurand.fr/2014/02/14/please-do-not-patch-like-an-idiot/
-- [[[rfc6902]]] Bryan & Nottingham. RFC - 6902. http://tools.ietf.org/html/rfc6902
+- [[[rfc6902]]] Bryan & Nottingham. RFC - 6902 - JavaScript Object Notation (JSON) Patch. http://tools.ietf.org/html/rfc6902
 - [[[rfc7231]]] Fielding & Reschke.  RFC - 7231. http://tools.ietf.org/html/rfc7231
 - [[[bennadel]]] Ben Nadel. HTTP Status Code For Invalid Data: 400 vs 422. http://www.bennadel.com/blog/2434-http-status-codes-for-invalid-data-400-vs-422.htm
 - [[[rfc4918]]] Dusseault. RFC - 4918. http://tools.ietf.org/html/rfc4918
@@ -31,6 +32,7 @@ include::{chapters}/jaxrs.adoc[leveloffset=+1]
 - [[[uber]]] Uber - Uber Dev. https://developer.uber.com/v1/endpoints/
 - [[[headverb]]] Jason Harmon - RESTful Patterns for the HEAD verb. http://www.pragmaticapi.com/2013/02/14/restful-patterns-for-the-head-verb/
 - [[[rfc2616]]] Fielding et al. RFC - 2616. https://www.ietf.org/rfc/rfc2616.txt
+- [[[restfulapidesign]]] Geert Jansen. Thoughts on RESTful API Design. http://restful-api-design.readthedocs.org/
 
 [appendix]
 == JAX-RS Full Example
