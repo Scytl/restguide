@@ -377,7 +377,7 @@ And as value a list of comma-separated values of all fields to be returned.
 
 For example `GET /books?fields=title,pages`.
 
-TIP: In case of no _fields_ query param, the whole document should be returned to be compliant with REST _API_.
+TIP: In case of no query param, the whole document should be returned to be compliant with REST _API_.
 
 == Internationalization
 
