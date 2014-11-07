@@ -34,8 +34,12 @@ include::{chapters}/jaxrs.adoc[leveloffset=+1]
 - [[[rfc2616]]] Fielding et al. RFC - 2616. https://www.ietf.org/rfc/rfc2616.txt
 - [[[restfulapidesign]]] Geert Jansen. Thoughts on RESTful API Design. http://restful-api-design.readthedocs.org/
 - [[[realtimepagination]]] Rakhitha Nimesh. Paginating Real-Time Data With Cursor Based Pagination. http://www.sitepoint.com/paginating-real-time-data-cursor-based-pagination/
+- [[[jsonwebtokenietf]]] Jones et al. JSON Web Token (JWT). http://tools.ietf.org/html/draft-ietf-oauth-json-web-token-30
+- [[[jsonwebtoken]]] Lukas White. Using JSON Web Tokens with Node.js. http://www.sitepoint.com/using-json-web-tokens-node-js/
 
 == Copyright and License
+
+image::https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png[]
 
 [appendix]
 == JAX-RS Full Example

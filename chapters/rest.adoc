@@ -463,7 +463,7 @@ TIP: `processed` and `of` are integers, but it may contain a null value in case 
         +-------------+                     /-------------\                 /-------------\
         |    Client   |                     |    /books   |                 |  /books/rfa |
         +-------------+                     \-------------/                 \-------------/
-               |                                   |                                |
+               :                                   :                                :
                |         +---------------+         |                                |
                |---------| POST {content}|-------->|                                |
                |         +---------------+         |                                |
@@ -498,3 +498,136 @@ TIP: `processed` and `of` are integers, but it may contain a null value in case 
 ....
 
 == Security
+
+Security in RESTful Web Services can be implemented in several ways and following different protocols, some of them:
+
+* Basic Authentication with TLS
+* OAuth 1.0a
+* OAuth2
+* SAML 2.0
+* "`Tokens Approach`" with _JSON_ Web Token
+
+Based on previous experience and after studying all of them, "`Tokens Approach`" with *JSON Web Token* is enough.
+
+=== JSON Web Token
+
+Instead of supplying credentials such as a username and password with every request, we can allow the client to exchange identification data in a token.
+
+The idea behind "`Tokens Approach`" is to generate a signed token with some information and send it with every _API_ call.
+Then in server side the token is verified and if it is correct, we can get some parameters from token and use them in authorization mechanism.
+
+The initial authentication process is out of scope of _JSON_ Web Token, but in this case login and password are going to be sent .
+After that server authenticates the user the token is created and returned to caller with user information like, _loginname_, _name_ or any parameter about client required by caller with an _HTTP_ 200 code.
+Since then the only thing that client and server exchange regarding to authentication is the token.
+Token is sent to front and back using the _HTTP_ header attribute `x-access-token`.
+
+[ditaa]
+.JSON Web Token
+....
+
++-------------+                           /----------------\            /-------------------\
+|    Client   |                           |     /login     |            |   /secured/books  |
++-------------+                           \----------------/            \-------------------/
+      :                                            :                             :
+      |                                            |                             |
+      |           +-------------+         +-----------------+                    |
+      |---------->|  POST {l/p} |-------->|{d}  Authenticate|                    |
+      |           +-------------+         +-----------------+                    |
+      |                                            |                             |
+      |                                            |                             |
+      |           +-------------+                  |                             |
+      |           |HTTP 200     |                  |                             |
+      |           | {           |                  v                             |
+      |           |  "user": {  |         +-----------------+                    |
+      |<----------|         ... |---------|{d}Generate Token|                    |
+      |           |   },        |         +-----------------+                    |
+      |           |   "token":t |                                                |
+      |           | }           |                                                |
+      |           +-------------+                                                |
+      |                                                                          |
+      |                     +--------------------+                               |
+      |-------------------->| GET /secured/books |------------------------------>:
+      |                     | x-access-token: t  |                               |
+      |                     +--------------------+                               |
+      |                                                                          v
+      |                                                                 +-----------------+
+      |                                                                 |{d}Verify Token  |
+      |                                                                 +-----------------+
+      |                                                                          |
+      |                                                                          v
+      |                                                                 +-----------------+
+      |                                                                 |{d}Extract claim +
+      |                                                                 +-----------------+
+      |                                                                          |
+      |                                                                          v
+      |                                                                 +-----------------+
+      |                                                                 |{d}Authorization |
+      |                                                                 +-----------------+
+      |                                                                          |
+      |                                                                          |
+      |                       +----------------+                                 v
+      |                       |HTTP 200        |                        +-----------------+
+      |<----------------------|{content}       |------------------------|{d}   Execute    |
+      |                       |x-access-token:t|                        +-----------------+
+                              +----------------+
+....
+
+But how is it calculated the token? The <<jsonwebtokenietf, JSON Web Token IETF>> document defines how token is calculated.
+A _JWT_ is split into three parts, separated by periods and each one is encoded separately.
+It can be summarized as `<base64-encoded header>.<base64-encoded claims>.<base64-encoded signature>`.
+
+The first part is a _JOSE_ Header.
+It is an encoded string representation of a simple _JSON_ document which describes the token along with the hashing algorithm used.
+
+[source, json]
+.JWT using HMAC SHA-256
+----
+{
+  "typ" : "JWT", //<1>
+  "alg" : "HS256" //<2>
+}
+----
+<1> Encoded object is a _JSON_ Web Token.
+<2> _JWT_ is a _JWS_ MACed using HMAC SHA-256.
+
+The second part of the _JWT_ forms the core of the token.
+It is known as *Claims*
+It is represented by _JSON_ document too and contains a few pieces of information described in https://tools.ietf.org/html/draft-ietf-oauth-json-web-token-30#section-4.
+In next example we can see a simple claim.
+
+[source, json]
+.JWT Claims
+----
+{
+  "iss": "example.com", //<1>
+  "sub": "john", //<2>
+  "exp": 1300819380, //<3>
+  "clientIp": "127.0.0.1" //<4>
+}
+----
+<1> Identifies the principal that issued the _JWT_.
+<2> Identifies the principal that is the subject of the _JWT_.
+<3> Identifies the expiration time on or after which the _JWT_ *must not* be accepted for processing.
+<4> You can also add custom attributes not defined in the spec like _clientIp_.
+
+The third part of the _JWT_ is a signature generated based on the header (part one) and the body (part two).
+
+An example of token may look like: `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`.
+
+[WARNING]
+====
+_JWT_ *does not encrypt the payload*, it only signs it.
+You should not send any secret information using _JWT_, rather you should send information that is not secret but needs to be verified.
+
+If _JWT_ contains sensitive data you may need to take measures to prevent diclosure of this information to unintended parties.
+One way to achieve this is to use an encrypted _JWT_ and authenticate the recipient.
+Another way is to ensure that _JWTs_ containing unencrypted privacy-sensitive information are only transmitted using protocols utilizing encryption that support endpoint authentication, such as _TLS_.
+====
+
+[TIP]
+====
+You could add an additional layer of security by storing a record of issued tokens on the server, then verifying them against that record on each subsequent request.
+This would prevent a third-party from '`spoofing`' a token, and also allows the server to invalidate a token.
+
+Also you can implement rotatory key approach so key used for creating the token change every specified time or requests.
+====
