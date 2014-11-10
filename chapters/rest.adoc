@@ -220,16 +220,19 @@ a|Shows that all requests are directed to new location
 m|302 Found
 a|Shows that a resource already exists and is valid
 
-.6+|Client Errors 4XX
+.7+|Client Errors 4XX
 
 m|400 Bad Request
 a|Used when request cannot be processed due to syntax errors. For example malformed _JSON_.
 
 m|401 Unauthorized
-a|Used when request cannot be processed because of current user credentials
+a|Used when request cannot be processed because of current user credentials.
+
+m|403 Forbidden
+a|Used when security token is valid but it has expired.
 
 m|404 Not Found
-a|Used when resource is not found or when an unauthenticated user request a secured resource
+a|Used when resource is not found, when an unauthenticated user request a secured resource or when security token is missing or invalid.
 
 m|406 Not Acceptable
 a|Used when the resource cannot *produce* the the _MIME_ type specified by the client
@@ -572,7 +575,10 @@ Token is sent to front and back using the _HTTP_ header attribute `x-access-toke
                               +----------------+
 ....
 
-But how is it calculated the token? The <<jsonwebtokenietf, JSON Web Token IETF>> document defines how token is calculated.
+[[jwt_calculation]]
+But how is it calculated the token?
+
+The <<jsonwebtokenietf, JSON Web Token IETF>> document defines how token is calculated.
 A _JWT_ is split into three parts, separated by periods and each one is encoded separately.
 It can be summarized as `<base64-encoded header>.<base64-encoded claims>.<base64-encoded signature>`.
 
@@ -631,3 +637,46 @@ This would prevent a third-party from '`spoofing`' a token, and also allows the 
 
 Also you can implement rotatory key approach so key used for creating the token change every specified time or requests.
 ====
+
+=== Authentication
+
+In <<JSON Web Token>> we have only covered the authorization part but not he authentication one.
+This section is about *authorization* and how to implement it.
+
+Authorization shall be done by sending a _JSON_ document using _POST_ method to `/login`.
+This document contains two attributes `username` and `password` and may contain extra attributes like `pincode`, `captcha`, ...
+
+[source, json]
+.Login Example
+----
+{
+  "username" : "john",
+  "password" : "1234"
+}
+----
+
+Because authentication data is considered sensitive, it must be transmitted using _TLS_ as encryption protocol.
+
+WARNING: Encryption protocol may change depending on requirements of the project.
+
+In case of successful _login_, an _HTTP_ 200 status code is returned containing a _JSON_ document as response.
+This document may contain a _JSON_ object called `user` with information required by frontend about the user such as _full name_, _date of birth_ or _username_.
+Also it must contains a `token` attribute which contains the _JSON_ Web Token calculated as described in <<jwt_calculation, this paragraph>>.
+
+[source, json]
+.Response Example
+----
+{
+  "user" : {
+    "fullName" : "John Smith",
+    "username" : "john"
+  },
+
+  "token" : "123ACFF234...."
+}
+----
+
+In case of unsuccessful _login_, an _HTTP_ 401 status code is returned containing a _JSON_ document as response following <<Error Codes>> spec.
+
+For *logout*, there shall be a `/logout` endpoint under _DELETE_ method which logouts the user identified by the passed token.
+Token is passed as any other request as an _HTTP_ header attribute named `x-access-token`.

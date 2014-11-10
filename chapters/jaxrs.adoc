@@ -591,6 +591,8 @@ icon:folder-open-o[] Credential Manager +
 
 == Advanced
 
+=== Matrix Params
+
 === Sub-resource locator
 
 Resource classes can partially process a request and then provide another sub-resource object to process the remainder of the request.
@@ -837,3 +839,10 @@ We can access this resource in `http://<host>:<port>/<application>/v1/chapter` a
 Accessing `http://<host>:<port>/<application>/v2/chapter` the list of chapters will be returned as wel but using '`v2`' resource instead.
 
 === PATCH and JAX-RS
+
+=== REST Polling
+
+=== Security
+
+As mentioned in <<JSON Web Token>> section, _JWT_ is the approach used to secure RESTful Web Services endpoints.
+Almost all work is done in backend-side and for this example we are going to focus on not going to take into consideration other security aspects like encryption.
