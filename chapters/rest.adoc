@@ -680,3 +680,4 @@ In case of unsuccessful _login_, an _HTTP_ 401 status code is returned containin
 
 For *logout*, there shall be a `/logout` endpoint under _DELETE_ method which logouts the user identified by the passed token.
 Token is passed as any other request as an _HTTP_ header attribute named `x-access-token`.
+As response an _HTTP_ 204 status code is returned.

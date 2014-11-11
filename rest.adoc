@@ -36,6 +36,7 @@ include::{chapters}/jaxrs.adoc[leveloffset=+1]
 - [[[realtimepagination]]] Rakhitha Nimesh. Paginating Real-Time Data With Cursor Based Pagination. http://www.sitepoint.com/paginating-real-time-data-cursor-based-pagination/
 - [[[jsonwebtokenietf]]] Jones et al. JSON Web Token (JWT). http://tools.ietf.org/html/draft-ietf-oauth-json-web-token-30
 - [[[jsonwebtoken]]] Lukas White. Using JSON Web Tokens with Node.js. http://www.sitepoint.com/using-json-web-tokens-node-js/
+- [[[jsontoken]]] Iain Porter. Writing REST services in Java: Security & Authorization. http://porterhead.blogspot.com.es/2013/01/writing-rest-services-in-java-part-6.html
 
 == Copyright and License
 
