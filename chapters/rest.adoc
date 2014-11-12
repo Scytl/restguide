@@ -157,6 +157,10 @@ PATCH /users/123 //<1>
 <2> _email_ field of given _user_ is upadated to new _value_.
 
 You can read more examples at http://tools.ietf.org/html/rfc6902#appendix-A
+
+_HTTP_ 204 status response code is used because the response does not carry any message body.
+Of course any other valid _HTTP_ status code could be returned too.
+
 ****
 
 == Content Negotiation
