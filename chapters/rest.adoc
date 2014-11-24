@@ -161,6 +161,8 @@ You can read more examples at http://tools.ietf.org/html/rfc6902#appendix-A
 _HTTP_ 204 status response code is used because the response does not carry any message body.
 Of course any other valid _HTTP_ status code could be returned too.
 
+Also _PATCH_ requires you set _Content-Type_ header to `application/json-patch`.
+
 ****
 
 == Content Negotiation
@@ -434,18 +436,20 @@ WebHooks:: The source site makes an _HTTP_ request to the _URI_ configured for t
 
 All approaches offer PROs and CONs, but currently the *polling* way is going to be used because of simplification and easier implementation.
 
-When an asynchronous operation is executed, instead of returning for example an _HTTP 201_ status code in case of _POST_ or _HTTP 204_ in case of _PUT_, an _HTTP 202_ code is returned with `Location` header specifying where the client can monitor the request.
+When an asynchronous operation is executed, instead of returning for example an _HTTP 201_ status code in case of _POST_ or _HTTP 204_ in case of _PUT_, an _HTTP 202_ code is returned with `Location` header specifying an identifier of the queued task where the client can monitor the request.
 The _HTTP 202_ is returned until defined _HTTP_ status code is returned.
 For example an _HTTP 201_ in case of _POST_ or _HTTP 204_ in case of _PUT_.
+
+To get information from a task, _GET_ request should be done to _tasks_ resource and identified with value of `Location` attribute.
 
 Let's see an example of REST polling.
 Creation of a resource may require validation of external services which can take several seconds.
 Some feedback to the users could be provided about what steps are being executed.
 To provide this feedback, client is going to use REST polling to know which step is being executed.
 
-First step is sending a _POST_ to backend `POST http://<localhost>/<application>/books` and it will return a `HTTP 202 OK` with header's attribute `Location` set to `http://<localhost>/<application>/books/<tokenId>`.
+First step is sending a _POST_ to backend `POST http://<localhost>/<application>/books` and it will return a `HTTP 202 OK` with header's attribute `Location` set to `123fa`.
 
-Then client can send _GET_ requests to given '`Location`', in this case `http://<localhost>/<application>/books/<tokenId>`, and polling the resource until a status code not equal to _HTTP 202_ is received.
+Then client can send _GET_ requests to _tasks_ resource, in this case `http://<localhost>/<application>/tasks/<tokenId>`, and polling the resource until a status code not equal to _HTTP 202_ is received.
 
 Each time an _HTTP 202_ is returned, a _JSON_ document must be sent in body response with information about the status of the task.
 This document may follow next schema:
@@ -468,7 +472,7 @@ TIP: `processed` and `of` are integers, but it may contain a null value in case 
 .Protocol Schema
 ....
         +-------------+                     /-------------\                 /-------------\
-        |    Client   |                     |    /books   |                 |  /books/rfa |
+        |    Client   |                     |    /books   |                 |  /books/123f|
         +-------------+                     \-------------/                 \-------------/
                :                                   :                                :
                |         +---------------+         |                                |
@@ -477,7 +481,7 @@ TIP: `processed` and `of` are integers, but it may contain a null value in case 
                |                                   |                                |
                |       +-------------------+       |                                |
                |<------|      HTTP 202     |-------|                                |
-               |       |Location /books/rfa|       |                                |
+               |       |  Location 123fa   |       |                                |
                |       +-------------------+       |                                |
                |                                                                    |
            +-->|                           +-------------------+                    |

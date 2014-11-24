@@ -288,7 +288,7 @@ To delete a resource we must use the _DELETE_ _HTTP_ method with `@DELETE` annot
 @Path("/books")
 public class BookResource {
 
-  @PUT // <1>
+  @DELETE // <1>
   @Path("{bookId: [0-9]+}")
   @Consumes(MediaType.APPLICATION_JSON)
   public Response deleteBook(@PathParam("bookId") String bookId) {
@@ -840,9 +840,335 @@ Accessing `http://<host>:<port>/<application>/v2/chapter` the list of chapters w
 
 === PATCH and JAX-RS
 
+Current version of _JAX-RS_ (v2.0) does not implement _PATCH_ _HTTP_ method.
+But _JAX-RS_ allows developers to implement their own methods, so in this case we could implement by ourselves the _PATCH_ one.
+
+[source, java]
+.PATCH.java
+----
+@Target({ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@HttpMethod("PATCH") //<1>
+public @interface PATCH {
+
+}
+----
+<1> To implement an _HTTP_ mehtod, `HttpMethod` must be used.
+
+And `PATH` can be used without any problem as `GET`, `POST`, ...
+
+[source, java]
+.BookResource.java
+----
+@PATCH //<1>
+@Consumes("application/json-patch") //<2>
+public Response patch(JsonArray jsonObject) { //<3>
+
+  //...
+
+  return Response.noContent().build();
+}
+----
+<1> `PATCH` annotation is used without any problem.
+<2> `Content-Type` for Patch operation should be `application/json-patch`.
+<3> Patch content is an array of operations to be executed.
+
+We can access this resource in `http://<host>:<port>/<application>/book` with _HTTP_ method _PATCH_ and `Content-Type` as `application/json-patch`.
+
 === REST Polling
 
 === Security
 
-As mentioned in <<JSON Web Token>> section, _JWT_ is the approach used to secure RESTful Web Services endpoints.
-Almost all work is done in backend-side and for this example we are going to focus on not going to take into consideration other security aspects like encryption.
+==== Authentication
+
+As mentioned in <<JSON Web Token>> section, _JWT_ is the approach used to secure RESTful Web Service endpoints.
+For this example and to simplify things we are going to use the _JAX-RS 2.0_ specification because it implements a concept called *server filters* that really fits our requirements.
+Filters can be used when you want to modify any request or response parameters as well as implementing authorization strategies.
+
+First thing is create a class that represents our user and it must implements `java.security.Principal`.
+
+[[userclass]]
+[source, java]
+.User.java
+----
+public class User implements Principal {
+
+  private String username; //<1>
+
+  private List<String> roles = new ArrayList<String>();
+
+  public User(String username, String... roles) {
+    super();
+    this.username = username;
+    this.roles = Arrays.asList(roles);
+  }
+
+  @Override
+  public String getName() { //<2>
+    return username;
+  }
+
+  public boolean isUserInRole(String role) { //<3>
+    return this.roles.contains(role);
+  }
+}
+----
+<1> All required information about user can be set as attributes. In this example only username is required.
+<2> `Principal` has only one method to override and it is an string that identifies a user.
+<3> Checks if current user belongs to passed role.
+
+Next step is create an _authentication_ filter.
+This filter is responsible of getting token from `x-access-token` header attribute, validate the token and get user information to be able to find the roles which belongs, and finally create the *security context* based on _jwt_.
+
+[source, java]
+.JWTAuthenticationFilter.java
+----
+@Provider //<1>
+@Priority(Priorities.AUTHENTICATION) //<2>
+public class JWTAuthenticationFilter implements ContainerRequestFilter { //<3>
+
+  private static final List<Class<? extends Annotation>> securityAnnotations = Arrays.asList(DenyAll.class, PermitAll.class, RolesAllowed.class);
+
+  @Context
+  private ResourceInfo resourceInfo; //<4>
+
+  @Override
+  public void filter(ContainerRequestContext request) throws IOException {
+
+
+      if(isSecuredResource()) { //<5>
+
+        String token = request.getHeaderString("x-access-token"); //<6>
+
+        try {
+          String username = getUsernameFromToken(token); //<7>
+          final User user = getUserByName(username); //<8>
+
+          request.setSecurityContext(new SecurityContext() { //<9>
+
+            @Override
+            public boolean isUserInRole(String role) { return user.isUserInRoles(role);}
+
+            @Override
+            public boolean isSecure() { return false;}
+
+            @Override public Principal getUserPrincipal() { return user;}
+
+            @Override
+            public String getAuthenticationScheme() { return SecurityContext.BASIC_AUTH;}
+            });
+
+        } catch (ParseException | JOSEException e) {
+          request.abortWith(Responses.NOT_FOUND);
+        }
+      }
+  }
+
+  private boolean isSecuredResource() {
+
+    for (Class<? extends Annotation> securityClass : securityAnnotations) {
+      if(resourceInfo.getResourceMethod().isAnnotationPresent(securityClass)) {
+        return true;
+      }
+    }
+
+  for (Class<? extends Annotation> securityClass : securityAnnotations) {
+      if(resourceInfo.getResourceClass().isAnnotationPresent(securityClass)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private String getUsernameFromToken(String token) throws ParseException, JOSEException {
+
+    SignedJWT signedJWT = SignedJWT.parse(token); //<10>
+    JWSVerifier verifier = new MACVerifier(SharedSecret.getSecret());
+
+    if(signedJWT.verify(verifier)) {
+      return signedJWT.getJWTClaimsSet().getSubject(); //<11>
+    } else {
+      throw new JOSEException("Firm is not verified.");
+    }
+  }
+}
+----
+<1> To plug a filter you must annotate it with `@Provider`.
+<2> Filter is executed during *authentication* phase.
+<3> Because filter is executed in server-side, it must implements `ContainerRequestFilter`.
+<4> `ResourceInfo` is injected to get information about endpoint method that is going to be called.
+<5> Checks if method is secured or not by verifying the presence of Java EE Security annotation.
+<6> As described in <<JSON Web Token>> section, _token_ must be set in `x-access-token` header attribute.
+<7> Gets username value from _token_.
+<8> With given username, the information about the <<userclass, user>> is returned from repository. Basically roles where user has access are returned.
+<9> A custom `SecurityContext` class to verify if user has the expected roles.
+<10> Parse the passed _token_.
+<11> If _token_ is valid and is verified as a _token_ generated by the system, we can get the _subject_ field. _Subject_ claim field is used to save username.
+
+.Nimbus JOSE + JWT
+****
+In this example we are using Nimbus JOSE + JWT library to create, parse, verify, ... _JWT_ tokens.
+
+Nimbus JOSE + JWT is an open source Java library which implements the Javascript Object Signing and Encryption (_JOSE_) spec suite and the closely related JSON Web Token (_JWT_) spec.
+
+A full description can be read at http://connect2id.com/products/nimbus-jose-jwt
+****
+
+And finally an _authorization_ filter.
+This filter is responsible of ensuring that the user has the required rights to access to resource.
+
+[source, java]
+.RolesAllowedFilter.java
+----
+@Provider
+@Priority(Priorities.AUTHORIZATION) //<1>
+public class RolesAllowedFilter implements ContainerRequestFilter {
+
+  private static final Response NOT_FOUND = Response.status(
+      Response.Status.NOT_FOUND).entity("{\"message\": \"Resource Not Found\"}").build();
+
+  @Context
+  private ResourceInfo resourceInfo;
+
+  @Override
+  public void filter(ContainerRequestContext requestContext)
+      throws IOException {
+    Method resourceMethod = resourceInfo.getResourceMethod();
+
+    // DenyAll on the method take precedence over RolesAllowed and PermitAll
+    if (resourceMethod.isAnnotationPresent(DenyAll.class)) {
+      requestContext.abortWith(NOT_FOUND);
+      return;
+    }
+
+    // RolesAllowed on the method takes precedence over PermitAll
+    RolesAllowed ra = resourceMethod.getAnnotation(RolesAllowed.class);
+    if(assertRole(requestContext, ra)) { //<2>
+      return;
+    }
+
+    // PermitAll takes precedence over RolesAllowed on the class
+    if (resourceMethod.isAnnotationPresent(PermitAll.class)) {
+      // Do nothing.
+      return;
+    }
+
+    if (resourceInfo.getResourceClass().isAnnotationPresent(DenyAll.class)) {
+      requestContext.abortWith(NOT_FOUND);
+    }
+
+    // RolesAllowed on the class takes precedence over PermitAll
+    ra = resourceInfo.getResourceClass().getAnnotation(RolesAllowed.class);
+    if(assertRole(requestContext, ra)) {
+      return;
+    }
+  }
+
+  private boolean assertRole(ContainerRequestContext requestContext, RolesAllowed ra) {
+
+    if (ra != null) {
+      String[] roles = ra.value();
+      for (String role : roles) {
+        if (requestContext.getSecurityContext().isUserInRole(role)) { //<3>
+          return true;
+        }
+      }
+      requestContext.abortWith(NOT_FOUND);
+    }
+    return false;
+  }
+}
+----
+<1> Filter is executed during *authentication* phase.
+<2> Asserts if current user is in role list.
+<3> Uses `SecurityContext` provided in authentication phase, to check if current user is in endpoint role.
+
+Having both classes in _classpath_, we can use _Java EE_ security annotations to secure RESTful web services.
+
+Let's see how to implement a _login_ service.
+Note that this service is not securized.
+
+[source, java]
+.UserResource.java
+----
+@Path("login")
+public class UserResource {
+
+  @POST
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response login(JsonObject jsonObject) throws JOSEException {
+
+    JsonString username = (JsonString) jsonObject.get("username"); //<1>
+    JsonString password = (JsonString) jsonObject.get("password");
+
+    if (authenticate(username.getString(), password.getString())) { //<2>
+
+      String token = createToken(username.getString(), "example.com"); //<3>
+
+      JsonObject responseDocument = Json.createObjectBuilder()
+        .add("user", Json.createObjectBuilder().add("username", username).build())
+        .add("token", token)
+        .build(); //<4>
+
+      return Response.ok(responseDocument).build();
+
+    }
+
+    return Response.status(Status.NOT_FOUND).build();
+
+  }
+
+  private String createToken(String subject, String issuer) throws JOSEException {
+
+    JWSSigner signer = new MACSigner(SharedSecret.getSecret());
+
+    JWTClaimsSet claimsSet = new JWTClaimsSet();
+    claimsSet.setSubject(subject); //<5>
+    claimsSet.setIssueTime(new Date());
+    claimsSet.setIssuer(issuer);
+
+    SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claimsSet);
+    signedJWT.sign(signer);
+
+    return signedJWT.serialize(); //<6>
+
+  }
+}
+----
+<1> _username_ and _password_ are sent as document body.
+<2> Authenticates given user and password.
+<3> Creates the _token_ by using _example.com_ domain as issuer.
+<4> Creates the response body document.
+<5> Sets username as _subject_ of the _token_.
+<6> Returns the _token_ as string.
+
+And a secured resource:
+
+[source, java]
+.BookResource.java
+----
+import javax.annotation.security.RolesAllowed;
+
+@Path("/book")
+public class BookResource {
+
+  @GET
+  @Produces(MediaType.APPLICATION_JSON)
+  @RolesAllowed("admin") //<1>
+  public String book() {
+    //...
+  }
+
+  @GET
+  @Path("/article")
+  @Produces(MediaType.APPLICATION_JSON)
+  @RolesAllowed("superadmin")
+  public String article() {
+    //...
+  }
+
+}
+----
+<1> Only users with role _admin_ can access to this resource.
