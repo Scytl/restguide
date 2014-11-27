@@ -472,7 +472,7 @@ TIP: `processed` and `of` are integers, but it may contain a null value in case 
 .Protocol Schema
 ....
         +-------------+                     /-------------\                 /-------------\
-        |    Client   |                     |    /books   |                 |  /books/123f|
+        |    Client   |                     |    /books   |                 |  /tasks/123f|
         +-------------+                     \-------------/                 \-------------/
                :                                   :                                :
                |         +---------------+         |                                |

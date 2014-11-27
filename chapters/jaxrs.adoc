@@ -885,7 +885,7 @@ As mentioned in <<JSON Web Token>> section, _JWT_ is the approach used to secure
 For this example and to simplify things we are going to use the _JAX-RS 2.0_ specification because it implements a concept called *server filters* that really fits our requirements.
 Filters can be used when you want to modify any request or response parameters as well as implementing authorization strategies.
 
-First thing is create a class that represents our user and it must implements `java.security.Principal`.
+First thing is creating a class that represents our user and it must implements `java.security.Principal`.
 
 [[userclass]]
 [source, java]
