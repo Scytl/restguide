@@ -340,7 +340,7 @@ WARNING: Currently you can only sort elements by single field.
     "offset": 0, //<4>
     "count": 2, //<5>
   },
-  "sort": { //<6>
+  "sorting": { //<6>
     "orderDirection": "ASC", //<7>
     "orderFieldName": "id" //<8>
   }
@@ -351,7 +351,7 @@ WARNING: Currently you can only sort elements by single field.
 <3> `limit` is the number of elements per page to retrieve.
 <4> `offset` sets the current page (or offset). It is zero-based.
 <5> `count` is the total number of items available.
-<6> `sort` is the parent element for all sort parameters if elements are ordered..
+<6> `sorting` is the parent element for all sort parameters if elements are ordered..
 <7> Direction of the order. _ASC_ for ascendant and _DESC_ for descendant.
 <8> Ordered field name.
 
