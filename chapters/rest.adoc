@@ -420,6 +420,24 @@ For example to know if a user with _login_ attribute (which is unique) is alread
 
 The response may be a `200 OK` if the resource already exists or `404 OK` in case it has not been created yet.
 
+== Counting
+
+In some cases you may need to count the number of resources that are stored in backend.
+In these cases you may use special reserved keyword `count`.
+
+So if we should return the number of books we should do something like `GET /books/count`.
+
+The return type is a _JSON_ document that returns the number of elements.
+
+[source, json]
+----
+{
+  "count": 6 //<1> <2>
+}
+----
+<1> `count` sets the number of elements.
+<2> Number of elements is an integer.
+
 == REST Polling
 
 Sometimes an action takes too long to be completed in the context of a single _HTTP_ request.
