@@ -10,26 +10,26 @@ An example of _RAML_ document may look like:
 [source, yaml]
 .music.raml
 ----
-#%RAML 0.8 #1
+#%RAML 0.8 # <1>
 
 title: World Music API
 baseUri: http://example.api.com/{version}
 version: v1
-traits: #2
+traits: # <2>
   - paged:
     queryParameters:
       pages:
         description: The number of pages to return
         type: number
-  - secured: !include http://raml-example.com/secured.yml #3
-/songs: #4
+  - secured: !include http://raml-example.com/secured.yml # <3>
+/songs: # <4>
   is: [ paged, secured ]
   get:
     queryParameters:
       genre:
         description: filter the songs by genre
   post:
-  /{songId}: #5
+  /{songId}: # <5>
     get:
       responses:
         200:
@@ -47,7 +47,7 @@ traits: #2
                 }
   delete:
     description: |
-      This method will *delete* an **individual song** #6
+      This method will *delete* an **individual song** # <6>
 ----
 <1> For every _API_, start by defining which version of _RAML_ you are using, and then document basic characteristics of your _API_ - the title, version, and baseURI.
 <2> _RAML_ allows you to define patterns using traits, resourceTypes, and securitySchemes, and then use them within a _API_ to minimize repetition.
