@@ -1,1 +1,62 @@
 = RAML
+
+_RESTful API_ Modeling Language http://raml.org/[RAML] is a simple and succinct way of describing practically-RESTful APIs.
+It encourages reuse, enables discovery and pattern-sharing, and aims for merit-based emergence of best practices.
+The goal is to help our current API ecosystem by solving immediate problems and then encourage ever-better _API_ patterns.
+_RAML_ is built on broadly-used standards such as _YAML_ and _JSON_ and is a non-proprietary, vendor-neutral open spec.
+
+An example of _RAML_ document may look like:
+
+[source, yaml]
+.music.raml
+----
+#%RAML 0.8 #1
+
+title: World Music API
+baseUri: http://example.api.com/{version}
+version: v1
+traits: #2
+  - paged:
+    queryParameters:
+      pages:
+        description: The number of pages to return
+        type: number
+  - secured: !include http://raml-example.com/secured.yml #3
+/songs: #4
+  is: [ paged, secured ]
+  get:
+    queryParameters:
+      genre:
+        description: filter the songs by genre
+  post:
+  /{songId}: #5
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              schema: |
+                { "$schema": "http://json-schema.org/schema",
+                "type": "object",
+                "description": "A canonical song",
+                "properties": {
+                  "title":  { "type": "string" },
+                  "artist": { "type": "string" }
+                  },
+                  "required": [ "title", "artist" ]
+                }
+  delete:
+    description: |
+      This method will *delete* an **individual song** #6
+----
+<1> For every _API_, start by defining which version of _RAML_ you are using, and then document basic characteristics of your _API_ - the title, version, and baseURI.
+<2> _RAML_ allows you to define patterns using traits, resourceTypes, and securitySchemes, and then use them within a _API_ to minimize repetition.
+<3> Externalize those patterns, store them on the web, and import them with an !include.
+<4> Easily define resources and methods, then add as much detail as you want. Apply traits and other patterns, or add parameters and other details specific to each call.
+<5> Describe expected responses for multiple mime-types and specify schemas and examples for each one. Schemas and examples can be defined in-line, or externalized with `!include`.
+<6> Write human-readable, markdown-formatted descriptions throughout your _RAML_ spec, or include entire markdown documentation sections at the root.
+
+== RAML API-Designer
+
+_RAML_ has a _RAML_ editor that can be installed locally.
+The editor and the instructions to install it are found in https://github.com/Scytl/api-designer.
