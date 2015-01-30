@@ -577,15 +577,15 @@ Most of the times you don't need to do anything with `web.xml` so rely on scanni
 
 One important point is to put `javax.ws.rs.Application` in standard place so anyone can take a quick overview of which resources compose our application and their implementatin.
 For this reason a common place to put `javax.ws.rs.Application` class is in `rs` package.
-So a valid package is `com.scytl.govlab.rs`.
+So a valid package is `com.superbiz.app.rs`.
 
 
 icon:folder-open-o[] Credential Manager +
-{nbsp}{nbsp}{nbsp}{nbsp}icon:th-large[] com.scytl.credentialmanager.rs +
+{nbsp}{nbsp}{nbsp}{nbsp}icon:th-large[] com.superbiz.app.rs +
 {nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}icon:file-o[] CredentialManagerResources.java +
-{nbsp}{nbsp}{nbsp}{nbsp}icon:th-large[] com.scytl.credentialmanager.credential.boundary +
+{nbsp}{nbsp}{nbsp}{nbsp}icon:th-large[] com.superbiz.app.credential.boundary +
 {nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}icon:file-o[] CredentialResource.java +
-{nbsp}{nbsp}{nbsp}{nbsp}icon:th-large[] com.scytl.credentialmanager.credential.entity +
+{nbsp}{nbsp}{nbsp}{nbsp}icon:th-large[] com.superbiz.app.credential.entity +
 {nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}icon:file-o[] Credential.java +
 ====
 
