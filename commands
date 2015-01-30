@@ -1,5 +1,0 @@
-source ~/.rvm/scripts/rvm
-rvm list
-rvm use 2.1.4
-
-asciidoctor rest.adoc -r asciidoctor-diagram/ditaa -o rest.html
