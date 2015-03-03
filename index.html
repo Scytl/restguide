@@ -1345,17 +1345,8 @@ Currently you can only sort elements by single field.
 </tr>
 </table>
 </div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-Obviously Time-based pagination is not always possible, it will depend on the resource nature.
-</td>
-</tr>
-</table>
+<div class="paragraph">
+<p>Obviously Time-based pagination is not always possible, it will depend on the resource nature.</p>
 </div>
 <div class="admonitionblock warning">
 <table>
@@ -1443,17 +1434,8 @@ In case of no query param, the whole document should be returned to be compliant
 </li>
 </ul>
 </div>
-<div class="admonitionblock tip">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-tip" title="Tip"></i>
-</td>
-<td class="content">
-Use <em>HTTP</em> headers approach instead of query parameter approach because <em>HTTP</em> headers provide a clear separation between infrastructure and business.
-</td>
-</tr>
-</table>
+<div class="paragraph">
+<p>Use <em>HTTP</em> headers approach instead of query parameter approach because <em>HTTP</em> headers provide a clear separation between infrastructure and business.</p>
 </div>
 <div class="admonitionblock important">
 <table>
@@ -1463,6 +1445,20 @@ Use <em>HTTP</em> headers approach instead of query parameter approach because <
 </td>
 <td class="content">
 Any internacionalized response should set <code>Content-Language</code> <em>HTTP</em> header in response as well.
+</td>
+</tr>
+</table>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>In case of ordered <a href="#_pagination">Pagination</a> and internationalization you may want to use <code>java.text.Collator</code> class as a helper class for sorting fields depending on locale.</p>
+</div>
 </td>
 </tr>
 </table>
@@ -3837,7 +3833,7 @@ public class BookResource {
 <div id="footer">
 <div id="footer-text">
 Version 1.0<br>
-Last updated 2015-01-30 08:54:50 CET
+Last updated 2015-03-03 09:54:22 CET
 </div>
 </div>
 </body>
