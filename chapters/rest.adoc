@@ -402,7 +402,7 @@ IMPORTANT: Any internacionalized response should set `Content-Language` _HTTP_ h
 
 [TIP]
 ====
-In case of ordered <<Pagination>> and internationalization you may want to use +java.text.Collator+ class as a helper class for sorting fields depending on locale.
+In case of ordered <<Pagination>> and internationalization you may want to use `java.text.Collator` class as a helper class for sorting fields depending on locale.
 ====
 
 == Existence checks
