@@ -355,8 +355,7 @@ WARNING: Currently you can only sort elements by single field.
 <7> Direction of the order. _ASC_ for ascendant and _DESC_ for descendant.
 <8> Ordered field name.
 
-
-NOTE: Obviously Time-based pagination is not always possible, it will depend on the resource nature.
+Obviously Time-based pagination is not always possible, it will depend on the resource nature.
 
 [WARNING]
 ====
@@ -397,9 +396,14 @@ Language negotiation is similar to content negotiation, so you can use diffrent 
 * Using `Accept-Language` _HTTP_ headers.
 * Using a query parameter such as `locale`. For example `items/?locale=es`
 
-TIP: Use _HTTP_ headers approach instead of query parameter approach because _HTTP_ headers provide a clear separation between infrastructure and business.
+Use _HTTP_ headers approach instead of query parameter approach because _HTTP_ headers provide a clear separation between infrastructure and business.
 
 IMPORTANT: Any internacionalized response should set `Content-Language` _HTTP_ header in response as well.
+
+[TIP]
+====
+In case of ordered <<Pagination>> and internationalization you may want to use +java.text.Collator+ class as a helper class for sorting fields depending on locale.
+====
 
 == Existence checks
 
