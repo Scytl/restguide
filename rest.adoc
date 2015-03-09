@@ -37,13 +37,8 @@ include::{chapters}/jaxrs.adoc[leveloffset=+1]
 - [[[jsonwebtokenietf]]] Jones et al. JSON Web Token (JWT). http://tools.ietf.org/html/draft-ietf-oauth-json-web-token-30
 - [[[jsonwebtoken]]] Lukas White. Using JSON Web Tokens with Node.js. http://www.sitepoint.com/using-json-web-tokens-node-js/
 - [[[jsontoken]]] Iain Porter. Writing REST services in Java: Security & Authorization. http://porterhead.blogspot.com.es/2013/01/writing-rest-services-in-java-part-6.html
+- [[[ArquillianHome]]] Arquillian. Arquillian, http://arquillian.org/
 
 == Copyright and License
 
 image::https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png[]
-
-[appendix]
-== JAX-RS Full Example
-
-[appendix]
-== Refcard
