@@ -496,14 +496,20 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_default">4.7.3. Default</a></li>
 </ul>
 </li>
-<li><a href="#_advanced">4.8. Advanced</a>
+<li><a href="#_testing">4.8. Testing</a>
 <ul class="sectlevel3">
-<li><a href="#_matrix_params">4.8.1. Matrix Params</a></li>
-<li><a href="#_sub_resource_locator">4.8.2. Sub-resource locator</a></li>
-<li><a href="#_versioning">4.8.3. Versioning</a></li>
-<li><a href="#_patch_and_jax_rs">4.8.4. PATCH and JAX-RS</a></li>
-<li><a href="#_rest_polling_2">4.8.5. REST Polling</a></li>
-<li><a href="#_security_2">4.8.6. Security</a>
+<li><a href="#_arquillian_dependencies_and_configuration">4.8.1. Arquillian dependencies and configuration</a></li>
+<li><a href="#_arquillian_test">4.8.2. Arquillian Test</a></li>
+</ul>
+</li>
+<li><a href="#_advanced">4.9. Advanced</a>
+<ul class="sectlevel3">
+<li><a href="#_matrix_params">4.9.1. Matrix Params</a></li>
+<li><a href="#_sub_resource_locator">4.9.2. Sub-resource locator</a></li>
+<li><a href="#_versioning">4.9.3. Versioning</a></li>
+<li><a href="#_patch_and_jax_rs">4.9.4. PATCH and JAX-RS</a></li>
+<li><a href="#_rest_polling_2">4.9.5. REST Polling</a></li>
+<li><a href="#_security_2">4.9.6. Security</a>
 <ul class="sectlevel4">
 <li><a href="#_authentication_2">Authentication</a></li>
 </ul>
@@ -2547,7 +2553,7 @@ Some of them can be business errors thrown by our process, and others can be err
 <p>Exceptions in <em>JAX-RS</em> are propagated through <em>HTTP</em> response codes as explained in <a href="#_response_codes">Response Codes</a> section.
 <em>JAX-RS</em> defines <code>javax.ws.rs.core.Response</code> class to create response code and sent back to the client.</p>
 </div>
-<div class="listingblock">
+<div id="response-example" class="listingblock">
 <div class="title">BookResource.java</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-java" data-lang="java">@GET
@@ -2932,13 +2938,426 @@ So a valid package is <code>com.superbiz.app.rs</code>.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_advanced"><a class="anchor" href="#_advanced"></a>4.8. Advanced</h3>
+<h3 id="_testing"><a class="anchor" href="#_testing"></a>4.8. Testing</h3>
+<div class="paragraph">
+<p>Testing <em>RESTful Web Services</em> can be a bit complicated because there are some logic that are executed by a container.
+As we have seen in previous examples you can annotate a class with <code>@Path</code> and this class will become a <em>REST</em> endpoint.
+Container is in charge of configuring, registering, and running the endpoint and this is not managed by the developer.</p>
+</div>
+<div class="paragraph">
+<p>The same happens for serializing a returned entity like in <a href="#response-example">this example</a>.
+The serialization of an entity is done internally by the container.</p>
+</div>
+<div class="paragraph">
+<p>So running your integration tests requires that you deploy the business code inside the container.
+If not you are writing a test that is not exactly running in the same environment as in production and probably you will end up by mocking a lot of container features.</p>
+</div>
+<div class="paragraph">
+<p>And this is exactly what <strong>Arquillian</strong> fixes.</p>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Arquillian</div>
+<div class="paragraph">
+<p><strong>Arquillian</strong> is a testing framework that fills the gap between unit tests and integration tests so writting integration tests are as simple as writing a unit tests but running them within/against an application server.</p>
+</div>
+<div class="paragraph">
+<p>It deals with all the plumbing of container management, deployment, and framework initialization so you can focus on the task of writing your tests—real tests.
+<strong>Arquillian</strong> minimizes the burden on you by covering aspects surrounding test execution; some of these aspects are as follows:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Managing the life cycle of the container (start/stop)</p>
+</li>
+<li>
+<p>Bundling the test class with the dependent classes and resources into a deployable archive</p>
+</li>
+<li>
+<p>Enhancing the test class (for example, resolving @Inject, @EJB, and @Resource injections)</p>
+</li>
+<li>
+<p>Deploying the archive to test applications (deploy/undeploy), and capturing results and failures</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>You can read more about <em>Arquillian</em> in <a href="#ArquillianHome">[ArquillianHome]</a>.</p>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>So let&#8217;s start by adding <em>Arquillian</em> dependencies.</p>
+</div>
 <div class="sect3">
-<h4 id="_matrix_params"><a class="anchor" href="#_matrix_params"></a>4.8.1. Matrix Params</h4>
+<h4 id="_arquillian_dependencies_and_configuration"><a class="anchor" href="#_arquillian_dependencies_and_configuration"></a>4.8.1. Arquillian dependencies and configuration</h4>
+<div id="arquillian-pom" class="listingblock">
+<div class="title">pom.xml</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-xml" data-lang="xml">&lt;dependencyManagement&gt;
+  &lt;dependencies&gt;
+    &lt;dependency&gt;
+    &lt;groupId&gt;org.jboss.arquillian&lt;/groupId&gt; <i class="conum" data-value="1"></i><b>(1)</b>
+    &lt;artifactId&gt;arquillian-bom&lt;/artifactId&gt;
+    &lt;version&gt;1.1.7.Final&lt;/version&gt;
+    &lt;scope&gt;import&lt;/scope&gt;
+    &lt;type&gt;pom&lt;/type&gt;
+    &lt;/dependency&gt;
+  &lt;/dependencies&gt;
+&lt;/dependencyManagement&gt;
+
+&lt;dependencies&gt;
+  &lt;dependency&gt;
+    &lt;groupId&gt;org.apache.openejb&lt;/groupId&gt; <i class="conum" data-value="2"></i><b>(2)</b>
+    &lt;artifactId&gt;arquillian-tomee-embedded&lt;/artifactId&gt;
+    &lt;version&gt;1.7.1&lt;/version&gt;
+    &lt;scope&gt;test&lt;/scope&gt;
+  &lt;/dependency&gt;
+  &lt;dependency&gt;
+    &lt;groupId&gt;org.apache.openejb&lt;/groupId&gt; <i class="conum" data-value="3"></i><b>(3)</b>
+    &lt;artifactId&gt;tomee-jaxrs&lt;/artifactId&gt;
+    &lt;version&gt;1.7.1&lt;/version&gt;
+    &lt;scope&gt;test&lt;/scope&gt;
+  &lt;/dependency&gt;
+&lt;/dependencies&gt;</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Adds <em>Arquillian</em> <code>bom</code> file. This makes that all component added as dependency will contain exactly the same version.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Because we are using <em>Apache TomEE</em>, this dependency adds <em>Apache TomEE</em> as container to be managed by <em>Arquillian</em>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>Embedded <em>Apache TomEE</em> doesn&#8217;t comes with <em>JAX-RS</em> libraries so we need to add them manually.</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Let&#8217;s see how an Arquillian test looks like:</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_arquillian_test"><a class="anchor" href="#_arquillian_test"></a>4.8.2. Arquillian Test</h4>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java" data-lang="java">@RunWith(Arquillian.class) <i class="conum" data-value="1"></i><b>(1)</b>
+public class MoviesServiceTest {
+
+  @Deployment <i class="conum" data-value="2"></i><b>(2)</b>
+  public static JavaArchive createDeploymentPackage() {
+    return createDeploymentFile();
+  }
+
+  @EJB <i class="conum" data-value="3"></i><b>(3)</b>
+  MoviesService moviesService;
+
+  @Test
+  public void shouldCreateMovies() {
+    <i class="conum" data-value="4"></i><b>(4)</b>
+  }
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Test must use <code>Arquillian</code> runner.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td><em>Arquillian</em> needs to know what to deploy on the started container. Deployment file is created in an <code>static</code> method annotated with <code>Deployment</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>By default <em>Arquillian</em> runs tests inside the container so we can use any <em>Java EE</em> annotation available inside the container. In this case <code>javax.ejb.EJB</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="4"></i><b>4</b></td>
+<td>The test itself using the <em>EJB</em> or whatever we want.</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>As you may see test looks pretty similar to a unit test, a lot of details about application server or some aspects on how is started and stopped the application server are hidden to the developers.
+So what is happening under the covers when previous test is executed?</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="data:image/png;base64,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" alt="Arquillian Lifecycle" width="670" height="476">
+</div>
+<div class="title">Figure 3. Arquillian Lifecycle</div>
+</div>
+<div class="paragraph">
+<p>First of all <em>Arquillian</em> starts an embedded <em>Apache TomEE</em> (we have defined this in <a href="#arquillian-pom">pom.xml</a> in section 2).
+Then a method annotated with <code>Deployment</code> annotation is called and returns a <code>JavaArchive</code> to be deployed.</p>
+</div>
+<div class="paragraph">
+<p>After that the generated deployment file and the test itself is packaged and deployed to <em>Apache TomEE</em>.
+The test is run inside the container and the results are sent back to IDE.
+Note that this step is required because tests are run inside the container, and the result should be notified to the caller (surefire plugin, IDE, &#8230;&#8203;).</p>
+</div>
+<div class="paragraph">
+<p>And finally if there is no more tests to execute container is cleaned from deployed artifacts and <em>Apache TomEE</em> is stopped.</p>
+</div>
+<div class="paragraph">
+<p>And how should looks like a <code>@Deployment</code> annotated method?
+To create a deployment file you need to use a project called <code>Shrinkwrap</code>.
+<em>Arquillian</em> has already this project as dependency so you don&#8217;t need to worry about including it in <code>pom.xml</code>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java" data-lang="java">@Deployment
+public static WebArchive createDeploymentPackage() {
+  WebArchive deploymentFile = ShrinkWrap.create(WebArchive.class) <i class="conum" data-value="1"></i><b>(1)</b>
+  .addPackage("com.scytl.hibernate") <i class="conum" data-value="2"></i><b>(2)</b>
+  .addAsWebInfResource(EmptyAsset.INSTANCE, "beans.xml") <i class="conum" data-value="3"></i><b>(3)</b>
+  return deploymentFile;
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Creates a <code>war</code> file in memory. You could create an <code>ear</code> or <code>jar</code> file as well.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Adds inside the <code>war</code> file all classes under the package <code>com.scytl.hibernate</code>. That is inside a virtual directory called <code>WEB-INF/classes</code> as <code>war</code> spec suggests.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>Adds an empty file called <code>beans.xml</code> as <code>WEB-INF</code> resource. That is in <code>WEB-INF</code> directory.</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>And with this virtual object file <em>Arquillian</em> manages itself to deploy it to container.</p>
+</div>
+<div class="paragraph">
+<p>By default <em>Arquillian</em> runs tests inside the container.
+This is known as <strong>in-container</strong> mode because <em>Arquillian</em> will package the deployment file along with test and sent it to the container for execution.</p>
+</div>
+<div class="paragraph">
+<p>But there is also another mode called <strong>client</strong>.
+In this case <em>Arquillian</em> will simply deploy the deplpoyment file to the server but the test will remain on client side (running from your JVM).
+In these cases you are free to test the container from the outside, as any client (for example browser) will see it.
+So for testing <em>JAX-RS</em> applications it may be really useful using <em>client</em> mode instead of <em>in-container</em> ones.</p>
+</div>
+<div class="paragraph">
+<p>The <em>Arquillian</em> lifecycle in <em>client</em> mode looks like:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="data:image/png;base64,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" alt="Arquillian containr Lifecycle" width="610" height="476">
+</div>
+<div class="title">Figure 4. Arquillian containr Lifecycle</div>
+</div>
+<div class="paragraph">
+<p>Note that now the deployment file is deployed (but not the test) and instead of running test inside container, test is run inside the client and it communicates with container as any other client would do, by using a <em>URL</em>.</p>
+</div>
+<div class="paragraph">
+<p>Let&#8217;s see an example on how to use <em>client</em> mode with RESTful Web Services.</p>
+</div>
+<div class="listingblock">
+<div class="title">com/scytl/rest/PersonResource.java</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java" data-lang="java">package com.scytl.rest;
+
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+@Path("/person") <i class="conum" data-value="1"></i><b>(1)</b>
+public class PersonResource {
+
+  private String OUTPUT = "{\n" +
+  "  \"firstName\": \"John\",\n" +
+  "  \"lastName\": \"Smith\",\n" +
+  "  \"isAlive\": true,\n" +
+  "  \"age\": 25,\n" +
+  "  \"height_cm\": 167.6,\n" +
+  "  \"address\": {\n" +
+  "    \"streetAddress\": \"21 2nd Street\",\n" +
+  "    \"city\": \"New York\",\n" +
+  "    \"state\": \"NY\",\n" +
+  "    \"postalCode\": \"10021-3100\"\n" +
+  "  },\n" +
+  "  \"phoneNumbers\": [\n" +
+  "    {\n" +
+  "      \"type\": \"home\",\n" +
+  "      \"number\": \"212 555-1234\"\n" +
+  "    },\n" +
+  "    {\n" +
+  "      \"type\": \"office\",\n" +
+  "      \"number\": \"646 555-4567\"\n" +
+  "    }\n" +
+  "  ],\n" +
+  "  \"children\": [],\n" +
+  "  \"spouse\": null\n" +
+  "}";
+
+  @GET
+  @Path("{personId}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response person(@PathParam("personId") String bookId) {
+    return Response.ok(OUTPUT).build(); <i class="conum" data-value="2"></i><b>(2)</b>
+  }
+
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Common <em>JAX-RS</em> annotations are used in the example.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Service returns a <em>JSON</em> document.</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>So now we need to write a test.
+It will use <em>Arquillian</em> to deploy the <code>PersonResource</code> inside container and then use <code>Rest-Assured</code> for connecting to the service and assert the output message.</p>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">About REST-Assured</div>
+<div class="paragraph">
+<p>Testing and validating <em>REST</em> services in Java is harder than in dynamic languages such as <em>Ruby</em> and <em>Groovy</em>.
+<strong>REST Assured</strong> brings the simplicity of using these languages into the Java domain.</p>
+</div>
+<div class="paragraph">
+<p>More examples of how to use it can be found at <a href="https://code.google.com/p/rest-assured/wiki/Usage" class="bare">https://code.google.com/p/rest-assured/wiki/Usage</a>.</p>
+</div>
+<div class="paragraph">
+<p>Only one dependency is required to use <em>REST-assured</em> in a project.</p>
+</div>
+<div class="listingblock">
+<div class="title">pom.xml</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-xml" data-lang="xml">&lt;dependency&gt;
+  &lt;groupId&gt;com.jayway.restassured&lt;/groupId&gt;
+  &lt;artifactId&gt;rest-assured&lt;/artifactId&gt;
+  &lt;version&gt;2.4.0&lt;/version&gt;
+  &lt;scope&gt;test&lt;/scope&gt;
+&lt;/dependency&gt;</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">com/scytl/rest/PersonResourceTest.java</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java" data-lang="java">package com.scytl.rest;
+
+import static com.jayway.restassured.RestAssured.get;
+import static org.junit.Assert.assertThat;
+import static org.hamcrest.CoreMatchers.is;
+
+
+import com.jayway.restassured.path.json.JsonPath;
+import org.jboss.arquillian.container.test.api.Deployment;
+import org.jboss.arquillian.junit.Arquillian;
+import org.jboss.arquillian.test.api.ArquillianResource;
+import org.jboss.shrinkwrap.api.ShrinkWrap;
+import org.jboss.shrinkwrap.api.spec.WebArchive;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import javax.ws.rs.core.UriBuilder;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URL;
+
+@RunWith(Arquillian.class) <i class="conum" data-value="1"></i><b>(1)</b>
+public class PersonResourceTest {
+
+  @Deployment(testable = false) <i class="conum" data-value="2"></i><b>(2)</b>
+  public static WebArchive createDeployment() {
+    return ShrinkWrap.create(WebArchive.class, "persontest.war")
+    .addClass(PersonResource.class);
+  }
+
+  @ArquillianResource <i class="conum" data-value="3"></i><b>(3)</b>
+  URL baseUrl;
+
+  @Test
+  public void shouldReturnExpectedPerson() {
+    URI endpoint = UriBuilder.fromPath(baseUrl.toExternalForm()).path(PersonResource.class).path("1").build(); <i class="conum" data-value="4"></i><b>(4)</b>
+    InputStream response = get(endpoint).then().statusCode(200).extract().asInputStream(); <i class="conum" data-value="5"></i><b>(5)</b>
+
+    JsonPath jsonPath = new JsonPath(response);
+    String firstName = jsonPath.getString("firstName"); <i class="conum" data-value="6"></i><b>(6)</b>
+    String streetAddress = jsonPath.getString("address.streetAddress"); <i class="conum" data-value="7"></i><b>(7)</b>
+
+    assertThat(firstName, is("John"));
+    assertThat(streetAddress, is("21 2nd Street")); <i class="conum" data-value="8"></i><b>(8)</b>
+  }
+
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Tests should be annotated with <code>Arquillian</code> runner.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Sets test to be run in container by using <code>testeable = false</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>The deployed file is deployed in a server. Using <code>@ArquillianResource</code> the URL where the file is deployed is injected on test.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="4"></i><b>4</b></td>
+<td>Creates the <em>URI</em> where endpoint is mapped.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="5"></i><b>5</b></td>
+<td>Uses <code>get</code> static method (provided by REST-assured) to do an invocation using <code>HTTP GET</code> to procided direction and asserts that the status code is the expected one.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="6"></i><b>6</b></td>
+<td><code>JsonPath</code> class allows you to use <em>XPath</em> like expressions but for <em>JSON</em>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="7"></i><b>7</b></td>
+<td><code>streetAddress</code> value is got from returned <em>JSON</em> document.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="8"></i><b>8</b></td>
+<td>Standard <code>assertThat</code> method from <em>JUnit</em> is used.</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_advanced"><a class="anchor" href="#_advanced"></a>4.9. Advanced</h3>
+<div class="sect3">
+<h4 id="_matrix_params"><a class="anchor" href="#_matrix_params"></a>4.9.1. Matrix Params</h4>
 
 </div>
 <div class="sect3">
-<h4 id="_sub_resource_locator"><a class="anchor" href="#_sub_resource_locator"></a>4.8.2. Sub-resource locator</h4>
+<h4 id="_sub_resource_locator"><a class="anchor" href="#_sub_resource_locator"></a>4.9.2. Sub-resource locator</h4>
 <div class="paragraph">
 <p>Resource classes can partially process a request and then provide another sub-resource object to process the remainder of the request.
 This approach can be used in different situations, but one situation that fits pretty well is to deal with &#8220;M to 1&#8221; relationships.</p>
@@ -3187,7 +3606,7 @@ But if you want to maintain your entity classes anemic, you can create a subreso
 </div>
 </div>
 <div class="sect3">
-<h4 id="_versioning"><a class="anchor" href="#_versioning"></a>4.8.3. Versioning</h4>
+<h4 id="_versioning"><a class="anchor" href="#_versioning"></a>4.9.3. Versioning</h4>
 <div class="paragraph">
 <p>As seen in <a href="#versioning-rest">REST versioning</a>, RESTful Web Services are going to be versioned (in case it is necessary) using <em>URL</em> path to set version number of <em>API</em>.</p>
 </div>
@@ -3276,7 +3695,7 @@ Accessing <code><a href="http://&lt;host&gt;:&lt;port&gt;/&lt;application&gt;/v2
 </div>
 </div>
 <div class="sect3">
-<h4 id="_patch_and_jax_rs"><a class="anchor" href="#_patch_and_jax_rs"></a>4.8.4. PATCH and JAX-RS</h4>
+<h4 id="_patch_and_jax_rs"><a class="anchor" href="#_patch_and_jax_rs"></a>4.9.4. PATCH and JAX-RS</h4>
 <div class="paragraph">
 <p>Current version of <em>JAX-RS</em> (v2.0) does not implement <em>PATCH</em> <em>HTTP</em> method.
 But <em>JAX-RS</em> allows developers to implement their own methods, so in this case we could implement by ourselves the <em>PATCH</em> one.</p>
@@ -3337,11 +3756,11 @@ public Response patch(JsonArray jsonObject) { <i class="conum" data-value="3"></
 </div>
 </div>
 <div class="sect3">
-<h4 id="_rest_polling_2"><a class="anchor" href="#_rest_polling_2"></a>4.8.5. REST Polling</h4>
+<h4 id="_rest_polling_2"><a class="anchor" href="#_rest_polling_2"></a>4.9.5. REST Polling</h4>
 
 </div>
 <div class="sect3">
-<h4 id="_security_2"><a class="anchor" href="#_security_2"></a>4.8.6. Security</h4>
+<h4 id="_security_2"><a class="anchor" href="#_security_2"></a>4.9.6. Security</h4>
 <div class="sect4">
 <h5 id="_authentication_2"><a class="anchor" href="#_authentication_2"></a>Authentication</h5>
 <div class="paragraph">
@@ -3833,7 +4252,7 @@ public class BookResource {
 <div id="footer">
 <div id="footer-text">
 Version 1.0<br>
-Last updated 2015-03-03 09:54:22 CET
+Last updated 2015-03-09 10:22:15 CET
 </div>
 </div>
 </body>
