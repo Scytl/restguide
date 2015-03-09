@@ -341,6 +341,7 @@ Some of them can be business errors thrown by our process, and others can be err
 Exceptions in _JAX-RS_ are propagated through _HTTP_ response codes as explained in <<Response Codes>> section.
 _JAX-RS_ defines `javax.ws.rs.core.Response` class to create response code and sent back to the client.
 
+[[response-example]]
 [source, java]
 .BookResource.java
 ----
@@ -588,6 +589,358 @@ icon:folder-open-o[] Credential Manager +
 {nbsp}{nbsp}{nbsp}{nbsp}icon:th-large[] com.superbiz.app.credential.entity +
 {nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}icon:file-o[] Credential.java +
 ====
+
+== Testing
+
+Testing _RESTful Web Services_ can be a bit complicated because there are some logic that are executed by a container.
+As we have seen in previous examples you can annotate a class with `@Path` and this class will become a _REST_ endpoint.
+Container is in charge of configuring, registering, and running the endpoint and this is not managed by the developer.
+
+The same happens for serializing a returned entity like in <<response-example, this example>>.
+The serialization of an entity is done internally by the container.
+
+So running your integration tests requires that you deploy the business code inside the container.
+If not you are writing a test that is not exactly running in the same environment as in production and probably you will end up by mocking a lot of container features.
+
+And this is exactly what *Arquillian* fixes.
+
+.Arquillian
+****
+*Arquillian* is a testing framework that fills the gap between unit tests and integration tests so writting integration tests are as simple as writing a unit tests but running them within/against an application server.
+
+It deals with all the plumbing of container management, deployment, and framework initialization so you can focus on the task of writing your tests—real tests.
+*Arquillian* minimizes the burden on you by covering aspects surrounding test execution; some of these aspects are as follows:
+
+* Managing the life cycle of the container (start/stop)
+* Bundling the test class with the dependent classes and resources into a deployable archive
+* Enhancing the test class (for example, resolving @Inject, @EJB, and @Resource injections)
+* Deploying the archive to test applications (deploy/undeploy), and capturing results and failures
+
+You can read more about _Arquillian_ in <<ArquillianHome>>.
+****
+
+So let's start by adding _Arquillian_ dependencies.
+
+=== Arquillian dependencies and configuration
+
+[[arquillian-pom]]
+[source, xml]
+.pom.xml
+----
+<dependencyManagement>
+  <dependencies>
+    <dependency>
+    <groupId>org.jboss.arquillian</groupId> <!--1-->
+    <artifactId>arquillian-bom</artifactId>
+    <version>1.1.7.Final</version>
+    <scope>import</scope>
+    <type>pom</type>
+    </dependency>
+  </dependencies>
+</dependencyManagement>
+
+<dependencies>
+  <dependency>
+    <groupId>org.apache.openejb</groupId> <!--2-->
+    <artifactId>arquillian-tomee-embedded</artifactId>
+    <version>1.7.1</version>
+    <scope>test</scope>
+  </dependency>
+  <dependency>
+    <groupId>org.apache.openejb</groupId> <!--3-->
+    <artifactId>tomee-jaxrs</artifactId>
+    <version>1.7.1</version>
+    <scope>test</scope>
+  </dependency>
+</dependencies>
+
+----
+<1> Adds _Arquillian_ `bom` file. This makes that all component added as dependency will contain exactly the same version.
+<2> Because we are using _Apache TomEE_, this dependency adds _Apache TomEE_ as container to be managed by _Arquillian_.
+<3> Embedded _Apache TomEE_ doesn't comes with _JAX-RS_ libraries so we need to add them manually.
+
+Let's see how an Arquillian test looks like:
+
+=== Arquillian Test
+
+[source, java]
+----
+@RunWith(Arquillian.class) //<1>
+public class MoviesServiceTest {
+
+  @Deployment //<2>
+  public static JavaArchive createDeploymentPackage() {
+    return createDeploymentFile();
+  }
+
+  @EJB //<3>
+  MoviesService moviesService;
+
+  @Test
+  public void shouldCreateMovies() {
+    //<4>
+  }
+}
+----
+<1> Test must use `Arquillian` runner.
+<2> _Arquillian_ needs to know what to deploy on the started container. Deployment file is created in an `static` method annotated with `Deployment`.
+<3> By default _Arquillian_ runs tests inside the container so we can use any _Java EE_ annotation available inside the container. In this case `javax.ejb.EJB`.
+<4> The test itself using the _EJB_ or whatever we want.
+
+As you may see test looks pretty similar to a unit test, a lot of details about application server or some aspects on how is started and stopped the application server are hidden to the developers.
+So what is happening under the covers when previous test is executed?
+
+[ditaa]
+.Arquillian Lifecycle
+....
++-------------+                           /-------------\
+|   Client    |                           |    TomEE    |
++-------------+                           \-------------/
+      :                                          :
+      |         +----------------------+         |
+      |---------| Start Embedded TomEE |-------->|
+      |         +----------------------+         |
+      |                                          |
+      |         +-----------------+              |
+      |-------->| Call @Deployment|              |
+      |         +-----------------+              |
+      |                 |                        |
+      |<----------------+                        |
+      |                                          |
+      |       +-----------------------+          |
+      |-------| Deploy Archive + Test |--------->|
+      |       +-----------------------+          |
+      |                                          |
+      |                               +-----------------------+
+      |<------------------------------|    Run and Collect    |
+      |                               +-----------------------+
+      |                                          |
+      |       +-----------------------+          |
+      |-------|   UnDeploy Archives   |--------->|
+      |       +-----------------------+          |
+      |                                          |
+      |       +-----------------------+          |
+      |------ | Stop Embedded TomEE   |--------->|
+      |       +-----------------------+          |
+      |                                          |
+....
+
+First of all _Arquillian_ starts an embedded _Apache TomEE_ (we have defined this in <<arquillian-pom, pom.xml>> in section 2).
+Then a method annotated with `Deployment` annotation is called and returns a `JavaArchive` to be deployed.
+
+After that the generated deployment file and the test itself is packaged and deployed to _Apache TomEE_.
+The test is run inside the container and the results are sent back to IDE.
+Note that this step is required because tests are run inside the container, and the result should be notified to the caller (surefire plugin, IDE, ...).
+
+And finally if there is no more tests to execute container is cleaned from deployed artifacts and _Apache TomEE_ is stopped.
+
+And how should looks like a `@Deployment` annotated method?
+To create a deployment file you need to use a project called `Shrinkwrap`.
+_Arquillian_ has already this project as dependency so you don't need to worry about including it in `pom.xml`.
+
+[source, java]
+----
+@Deployment
+public static WebArchive createDeploymentPackage() {
+  WebArchive deploymentFile = ShrinkWrap.create(WebArchive.class) //<1>
+  .addPackage("com.scytl.hibernate") //<2>
+  .addAsWebInfResource(EmptyAsset.INSTANCE, "beans.xml") //<3>
+  return deploymentFile;
+}
+----
+<1> Creates a `war` file in memory. You could create an `ear` or `jar` file as well.
+<2> Adds inside the `war` file all classes under the package `com.scytl.hibernate`. That is inside a virtual directory called `WEB-INF/classes` as `war` spec suggests.
+<3> Adds an empty file called `beans.xml` as `WEB-INF` resource. That is in `WEB-INF` directory.
+
+And with this virtual object file _Arquillian_ manages itself to deploy it to container.
+
+By default _Arquillian_ runs tests inside the container.
+This is known as *in-container* mode because _Arquillian_ will package the deployment file along with test and sent it to the container for execution.
+
+But there is also another mode called *client*.
+In this case _Arquillian_ will simply deploy the deplpoyment file to the server but the test will remain on client side (running from your JVM).
+In these cases you are free to test the container from the outside, as any client (for example browser) will see it.
+So for testing _JAX-RS_ applications it may be really useful using _client_ mode instead of _in-container_ ones.
+
+The _Arquillian_ lifecycle in _client_ mode looks like:
+
+[ditaa]
+.Arquillian containr Lifecycle
+....
++-------------+                           /-------------\
+|   Client    |                           |    TomEE    |
++-------------+                           \-------------/
+      :                                          :
+      |         +----------------------+         |
+      |---------| Start Embedded TomEE |-------->|
+      |         +----------------------+         |
+      |                                          |
+      |         +-----------------+              |
+      |-------->| Call @Deployment|              |
+      |         +-----------------+              |
+      |                 |                        |
+      |<----------------+                        |
+      |                                          |
+      |       +-----------------------+          |
+      |-------|    Deploy Archive     |--------->|
+      |       +-----------------------+          |
+      |                                          |
+      |       +-----------------------+          |
+      |------>|    URL interaction    |--------->|
+      |       +-----------------------+          |
+      |                                          |
+      |       +-----------------------+          |
+      |-------|   UnDeploy Archives   |--------->|
+      |       +-----------------------+          |
+      |                                          |
+      |       +-----------------------+          |
+      |------ | Stop Embedded TomEE   |--------->|
+      |       +-----------------------+          |
+      |                                          |
+....
+
+Note that now the deployment file is deployed (but not the test) and instead of running test inside container, test is run inside the client and it communicates with container as any other client would do, by using a _URL_.
+
+Let's see an example on how to use _client_ mode with RESTful Web Services.
+
+[source, java]
+.com/scytl/rest/PersonResource.java
+----
+package com.scytl.rest;
+
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+@Path("/person") //<1>
+public class PersonResource {
+
+  private String OUTPUT = "{\n" +
+  "  \"firstName\": \"John\",\n" +
+  "  \"lastName\": \"Smith\",\n" +
+  "  \"isAlive\": true,\n" +
+  "  \"age\": 25,\n" +
+  "  \"height_cm\": 167.6,\n" +
+  "  \"address\": {\n" +
+  "    \"streetAddress\": \"21 2nd Street\",\n" +
+  "    \"city\": \"New York\",\n" +
+  "    \"state\": \"NY\",\n" +
+  "    \"postalCode\": \"10021-3100\"\n" +
+  "  },\n" +
+  "  \"phoneNumbers\": [\n" +
+  "    {\n" +
+  "      \"type\": \"home\",\n" +
+  "      \"number\": \"212 555-1234\"\n" +
+  "    },\n" +
+  "    {\n" +
+  "      \"type\": \"office\",\n" +
+  "      \"number\": \"646 555-4567\"\n" +
+  "    }\n" +
+  "  ],\n" +
+  "  \"children\": [],\n" +
+  "  \"spouse\": null\n" +
+  "}";
+
+  @GET
+  @Path("{personId}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response person(@PathParam("personId") String bookId) {
+    return Response.ok(OUTPUT).build(); //<2>
+  }
+
+}
+----
+<1> Common _JAX-RS_ annotations are used in the example.
+<2> Service returns a _JSON_ document.
+
+So now we need to write a test.
+It will use _Arquillian_ to deploy the `PersonResource` inside container and then use `Rest-Assured` for connecting to the service and assert the output message.
+
+.About REST-Assured
+****
+Testing and validating _REST_ services in Java is harder than in dynamic languages such as _Ruby_ and _Groovy_.
+*REST Assured* brings the simplicity of using these languages into the Java domain.
+
+More examples of how to use it can be found at https://code.google.com/p/rest-assured/wiki/Usage.
+
+Only one dependency is required to use _REST-assured_ in a project.
+
+[source, xml]
+.pom.xml
+----
+<dependency>
+  <groupId>com.jayway.restassured</groupId>
+  <artifactId>rest-assured</artifactId>
+  <version>2.4.0</version>
+  <scope>test</scope>
+</dependency>
+----
+
+****
+
+[source, java]
+.com/scytl/rest/PersonResourceTest.java
+----
+package com.scytl.rest;
+
+import static com.jayway.restassured.RestAssured.get;
+import static org.junit.Assert.assertThat;
+import static org.hamcrest.CoreMatchers.is;
+
+
+import com.jayway.restassured.path.json.JsonPath;
+import org.jboss.arquillian.container.test.api.Deployment;
+import org.jboss.arquillian.junit.Arquillian;
+import org.jboss.arquillian.test.api.ArquillianResource;
+import org.jboss.shrinkwrap.api.ShrinkWrap;
+import org.jboss.shrinkwrap.api.spec.WebArchive;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import javax.ws.rs.core.UriBuilder;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URL;
+
+@RunWith(Arquillian.class) //<1>
+public class PersonResourceTest {
+
+  @Deployment(testable = false) //<2>
+  public static WebArchive createDeployment() {
+    return ShrinkWrap.create(WebArchive.class, "persontest.war")
+    .addClass(PersonResource.class);
+  }
+
+  @ArquillianResource //<3>
+  URL baseUrl;
+
+  @Test
+  public void shouldReturnExpectedPerson() {
+    URI endpoint = UriBuilder.fromPath(baseUrl.toExternalForm()).path(PersonResource.class).path("1").build(); //<4>
+    InputStream response = get(endpoint).then().statusCode(200).extract().asInputStream(); //<5>
+
+    JsonPath jsonPath = new JsonPath(response);
+    String firstName = jsonPath.getString("firstName"); //<6>
+    String streetAddress = jsonPath.getString("address.streetAddress"); //<7>
+
+    assertThat(firstName, is("John"));
+    assertThat(streetAddress, is("21 2nd Street")); //<8>
+  }
+
+}
+----
+<1> Tests should be annotated with `Arquillian` runner.
+<2> Sets test to be run in container by using `testeable = false`.
+<3> The deployed file is deployed in a server. Using `@ArquillianResource` the URL where the file is deployed is injected on test.
+<4> Creates the _URI_ where endpoint is mapped.
+<5> Uses `get` static method (provided by REST-assured) to do an invocation using `HTTP GET` to procided direction and asserts that the status code is the expected one.
+<6> `JsonPath` class allows you to use _XPath_ like expressions but for _JSON_.
+<7> `streetAddress` value is got from returned _JSON_ document.
+<8> Standard `assertThat` method from _JUnit_ is used.
 
 == Advanced
 
