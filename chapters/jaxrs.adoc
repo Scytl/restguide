@@ -765,7 +765,7 @@ So for testing _JAX-RS_ applications it may be really useful using _client_ mode
 The _Arquillian_ lifecycle in _client_ mode looks like:
 
 [ditaa]
-.Arquillian containr Lifecycle
+.Arquillian container Lifecycle
 ....
 +-------------+                           /-------------\
 |   Client    |                           |    TomEE    |
