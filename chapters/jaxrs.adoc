@@ -42,7 +42,7 @@ public class BookResource {
   public Response books() {
     List<Book> books = Arrays.asList(new Book("Book1"), new Book("Book2"));
     String json = toJson(books); // <4>
-    return Response.ok(books).build(); // <5>
+    return Response.ok(json).build(); // <5>
   }
 
 }
@@ -131,7 +131,7 @@ public class BookResource {
 <1> The way to add a regular expression is by adding the name of the path param and the regular expression separated by colon '`:`'.
 
 
-Resource in `http://<host>:<port>/<application>/books/123` will work but `http://<host>:<port>/<application>/books/123` returns an _HTTP_ 404 code error.
+Resource in `http://<host>:<port>/<application>/books/123` will work but `http://<host>:<port>/<application>/books/abc` returns an _HTTP_ 404 code error.
 ====
 
 == Extracting request parameters
@@ -166,7 +166,7 @@ public String books(@DefaultValue("100") @QueryParam("price")int maxResults) {
 === @QueryParam
 
 `@QueryParam` extracts parameters from query path.
-Query is an optional part separated from path with a question mark '`?`' and contains pairs of key/value separated by semicolon `';'`.
+Query is an optional part separated from path with a question mark '`?`' and contains pairs of key/value separated by ampersand `'&'`.
 
 [source, java]
 .BookResource
