@@ -92,5 +92,11 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
+    <repositories>
+    <repository>
+      <id>tomee</id>
+      <url>https://repository.apache.org/content/repositories/snapshots/</url>
+    </repository>
+  </repositories>
  
 </project>
