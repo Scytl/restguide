@@ -1228,6 +1228,97 @@ public Response patch(JsonArray jsonObject) { //<3>
 
 We can access this resource in `http://<host>:<port>/<application>/book` with _HTTP_ method _PATCH_ and `Content-Type` as `application/json-patch`.
 
+=== Chunk Upload
+
+In <<Chunked Upload>> we described how implement an upload of a huge chunked bytes in _REST_.
+
+[source, java]
+.Initial upload
+----
+@Inject
+TemporaryFolder temporaryFolder;
+
+@POST
+@Path("/chunkedUpload")
+@Consumes("*/*")
+@Produces(MediaType.APPLICATION_JSON)
+public Response chunked(InputStream reader) throws IOException {
+  UUID uploadId = UUID.randomUUID(); //<1>
+
+  java.nio.file.Path file = temporaryFolder.newFile(uploadId.toString()); //<2>
+  long offset = IOUtil.copyToFile(file, reader, Integer.MAX_VALUE); //<3>
+  return Response
+    .status(202)
+    .entity("{\n" + "  \"uploadId\": \"" + uploadId + "\",\n"
+      + "  \"offset\": " + offset + "\n" + "}").build();
+}
+----
+<1> Generates a random number as `uploadId`.
+<2> Creates a new file using the generated _UUID_ in a temporal directory.
+<3> Copies content to temporal file. Lat argument is to limit the amount of bytes that can be saved per chunked.
+
+[source, java]
+.Successive calls
+----
+@PUT
+@Path("/chunkedUpload")
+@Consumes("*/*")
+@Produces(MediaType.APPLICATION_JSON)
+public Response chunked(InputStream reader, @QueryParam("uploadId") String uploadId, @QueryParam("offset") Long offset) throws IOException {
+  File file = new File(temporaryFolder.getRoot(), uploadId);
+
+  if(isUploadIdValid(file)) {
+    if(isOffsetValid(file, offset)) { //<1>
+      long newOffset = IOUtil.copyToFile(file.toPath(), reader, Integer.MAX_VALUE); //<2>
+
+      return Response.status(202).entity("{\n" +
+        "  \"uploadId\": \""+uploadId+"\",\n" +
+        "  \"offset\": " + (offset + newOffset) + "\n" +
+        "}").build();
+
+    } else {
+      return Response.status(400).build();
+    }
+  } else {
+    return Response.noContent().build();
+  }
+}
+
+private boolean isOffsetValid(File file, long offset) {
+  return file.length() == offset;
+}
+
+private boolean isUploadIdValid(File file) {
+  return file.exists();
+}
+----
+<1> Checks if `uploadId` exists and if the offset is correct.
+<2> Appends content to the already created file.
+
+[source, java]
+.Commit
+----
+@POST
+@Path("/commitChunkedUpload")
+@Consumes(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON)
+public Response commit(@QueryParam("uploadId") String uploadId, String content) {
+  File file = new File(temporaryFolder.getRoot(), uploadId);
+
+  if(isUploadIdValid(file)) {
+    JsonReader parser = Json.createReader(new StringReader(content));
+    JsonObject readObject = parser.readObject(); //<1>
+    file.renameTo(new File(temporaryFolder.getRoot(), readObject.getString("filename"))); //<2>
+
+    return Response.created(URI.create("/"+uploadId)).build();
+  } else {
+    return Response.noContent().build();
+  }
+}
+----
+<1> Parses the _JSON_ document-
+<2> Gets filename provided and renames the uploaded file. Note that this operation can be insecure and should require security checks depending on project.
+
 === REST Polling
 
 === Security

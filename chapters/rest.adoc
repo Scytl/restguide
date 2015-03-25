@@ -530,6 +530,38 @@ TIP: `processed` and `of` are integers, but it may contain a null value in case 
                |                           +-------------------+                    |
 ....
 
+== Chunked Upload
+
+Uploads large files to Dropbox in multiple chunks.
+Also has the ability to resume if the upload is interrupted.
+
+To implement this massive upload two endpoints are required, `/chunkedUpload` and `/commitChunkedUpload`.
+
+The typical usage will be:
+
+First we send a `POST` request to `/chunkedUpload` with the first chunk of bytes of the file.
+It will return a _JSON_ document with `uploadedId` and `offset` and 202 as _HTTP_ status code.
+
+[[chunked_response]]
+[source, json]
+----
+{
+  "uploadId": "5453543AE34348756", # <1>
+  "offset": 32567 # <2>
+}
+----
+<1> Sets the number to reference in successive calls.
+<2> The byte offset of this chunk relative to the beginning of the full file.
+
+After that, a successive calls to `/chunkedUpload` using `PUT` and passing as parameters both `uploadId` and `offset`.
+In case of succesful upload a 202 status code is returned and a _JSON_ document like the <<chunked_response, previous one>> with `offset` containing the total amount transferred.
+
+If `uploadId` doesn't exist then a 404 error code is returned.
+If `offset` parameter is not the one that the server expects, then a 400 error code is returned.
+
+To mark that an update has finished we simply need to send a `POST` to `/commitChunkedUpload` specifing which upload has been finished using `uploadId` query parameter, and in body content all metadata information that may be required like name of the file, tags, ... and it will return a 201 status code.
+In case of `uploadId` is not found then a 404 error code is returned.
+
 == Security
 
 Security in RESTful Web Services can be implemented in several ways and following different protocols, some of them:
