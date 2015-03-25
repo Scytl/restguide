@@ -5,12 +5,12 @@
 	<artifactId>upload</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>war</packaging>
-
+ 
 	<properties>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
 	</properties>
-
+ 
 	<dependencies>
 		<dependency>
 			<groupId>org.apache.openejb</groupId>
@@ -26,19 +26,19 @@
 		<dependency>
 			<groupId>org.apache.openejb</groupId>
 			<artifactId>arquillian-tomee-remote</artifactId>
-			<version>1.7.1</version>
+			<version>1.7.2-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.openejb</groupId>
 			<artifactId>apache-tomee</artifactId>
-			<version>1.7.1</version>
+			<version>1.7.2-SNAPSHOT</version>
 			<classifier>plus</classifier>
 			<type>zip</type>
 		</dependency>
 		<!-- <dependency> -->
 		<!-- <groupId>org.apache.openejb</groupId> -->
 		<!-- <artifactId>arquillian-tomee-embedded</artifactId> -->
-		<!-- <version>1.7.1</version> -->
+		<!-- <version>1.7.2-SNAPSHOT</version> -->
 		<!-- <scope>test</scope> -->
 		<!-- </dependency> -->
 		<dependency>
@@ -53,7 +53,7 @@
 		<dependency>
 			<groupId>org.apache.openejb</groupId>
 			<artifactId>tomee-jaxrs</artifactId>
-			<version>1.7.1</version>
+			<version>1.7.2-SNAPSHOT</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -92,5 +92,5 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
-
+ 
 </project>
