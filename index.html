@@ -451,10 +451,11 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_existence_checks">2.9. Existence checks</a></li>
 <li><a href="#_counting">2.10. Counting</a></li>
 <li><a href="#_rest_polling">2.11. REST Polling</a></li>
-<li><a href="#_security">2.12. Security</a>
+<li><a href="#_chunked_upload">2.12. Chunked Upload</a></li>
+<li><a href="#_security">2.13. Security</a>
 <ul class="sectlevel3">
-<li><a href="#_json_web_token">2.12.1. JSON Web Token</a></li>
-<li><a href="#_authentication">2.12.2. Authentication</a></li>
+<li><a href="#_json_web_token">2.13.1. JSON Web Token</a></li>
+<li><a href="#_authentication">2.13.2. Authentication</a></li>
 </ul>
 </li>
 </ul>
@@ -508,8 +509,9 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_sub_resource_locator">4.9.2. Sub-resource locator</a></li>
 <li><a href="#_versioning">4.9.3. Versioning</a></li>
 <li><a href="#_patch_and_jax_rs">4.9.4. PATCH and JAX-RS</a></li>
-<li><a href="#_rest_polling_2">4.9.5. REST Polling</a></li>
-<li><a href="#_security_2">4.9.6. Security</a>
+<li><a href="#_chunk_upload">4.9.5. Chunk Upload</a></li>
+<li><a href="#_rest_polling_2">4.9.6. REST Polling</a></li>
+<li><a href="#_security_2">4.9.7. Security</a>
 <ul class="sectlevel4">
 <li><a href="#_authentication_2">Authentication</a></li>
 </ul>
@@ -1638,7 +1640,56 @@ This document may follow next schema:</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_security"><a class="anchor" href="#_security"></a>2.12. Security</h3>
+<h3 id="_chunked_upload"><a class="anchor" href="#_chunked_upload"></a>2.12. Chunked Upload</h3>
+<div class="paragraph">
+<p>Uploads large files to Dropbox in multiple chunks.
+Also has the ability to resume if the upload is interrupted.</p>
+</div>
+<div class="paragraph">
+<p>To implement this massive upload two endpoints are required, <code>/chunkedUpload</code> and <code>/commitChunkedUpload</code>.</p>
+</div>
+<div class="paragraph">
+<p>The typical usage will be:</p>
+</div>
+<div class="paragraph">
+<p>First we send a <code>POST</code> request to <code>/chunkedUpload</code> with the first chunk of bytes of the file.
+It will return a <em>JSON</em> document with <code>uploadedId</code> and <code>offset</code> and 202 as <em>HTTP</em> status code.</p>
+</div>
+<div id="chunked_response" class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json" data-lang="json">{
+  "uploadId": "5453543AE34348756", <i class="conum" data-value="1"></i><b>(1)</b>
+  "offset": 32567 <i class="conum" data-value="2"></i><b>(2)</b>
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Sets the number to reference in successive calls.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>The byte offset of this chunk relative to the beginning of the full file.</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>After that, a successive calls to <code>/chunkedUpload</code> using <code>PUT</code> and passing as parameters both <code>uploadId</code> and <code>offset</code>.
+In case of succesful upload a 202 status code is returned and a <em>JSON</em> document like the <a href="#chunked_response">previous one</a> with <code>offset</code> containing the total amount transferred.</p>
+</div>
+<div class="paragraph">
+<p>If <code>uploadId</code> doesn&#8217;t exist then a 404 error code is returned.
+If <code>offset</code> parameter is not the one that the server expects, then a 400 error code is returned.</p>
+</div>
+<div class="paragraph">
+<p>To mark that an update has finished we simply need to send a <code>POST</code> to <code>/commitChunkedUpload</code> specifing which upload has been finished using <code>uploadId</code> query parameter, and in body content all metadata information that may be required like name of the file, tags, &#8230;&#8203; and it will return a 201 status code.
+In case of <code>uploadId</code> is not found then a 404 error code is returned.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_security"><a class="anchor" href="#_security"></a>2.13. Security</h3>
 <div class="paragraph">
 <p>Security in RESTful Web Services can be implemented in several ways and following different protocols, some of them:</p>
 </div>
@@ -1665,7 +1716,7 @@ This document may follow next schema:</p>
 <p>Based on previous experience and after studying all of them, &#8220;Tokens Approach&#8221; with <strong>JSON Web Token</strong> is enough.</p>
 </div>
 <div class="sect3">
-<h4 id="_json_web_token"><a class="anchor" href="#_json_web_token"></a>2.12.1. JSON Web Token</h4>
+<h4 id="_json_web_token"><a class="anchor" href="#_json_web_token"></a>2.13.1. JSON Web Token</h4>
 <div class="paragraph">
 <p>Instead of supplying credentials such as a username and password with every request, we can allow the client to exchange identification data in a token.</p>
 </div>
@@ -1801,7 +1852,7 @@ This would prevent a third-party from &#8216;spoofing&#8217; a token, and also a
 </div>
 </div>
 <div class="sect3">
-<h4 id="_authentication"><a class="anchor" href="#_authentication"></a>2.12.2. Authentication</h4>
+<h4 id="_authentication"><a class="anchor" href="#_authentication"></a>2.13.2. Authentication</h4>
 <div class="paragraph">
 <p>In <a href="#_json_web_token">JSON Web Token</a> we have only covered the authorization part but not he authentication one.
 This section is about <strong>authorization</strong> and how to implement it.</p>
@@ -3754,11 +3805,137 @@ public Response patch(JsonArray jsonObject) { <i class="conum" data-value="3"></
 </div>
 </div>
 <div class="sect3">
-<h4 id="_rest_polling_2"><a class="anchor" href="#_rest_polling_2"></a>4.9.5. REST Polling</h4>
+<h4 id="_chunk_upload"><a class="anchor" href="#_chunk_upload"></a>4.9.5. Chunk Upload</h4>
+<div class="paragraph">
+<p>In <a href="#_chunked_upload">Chunked Upload</a> we described how implement an upload of a huge chunked bytes in <em>REST</em>.</p>
+</div>
+<div class="listingblock">
+<div class="title">Initial upload</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java" data-lang="java">@Inject
+TemporaryFolder temporaryFolder;
+
+@POST
+@Path("/chunkedUpload")
+@Consumes("*/*")
+@Produces(MediaType.APPLICATION_JSON)
+public Response chunked(InputStream reader) throws IOException {
+  UUID uploadId = UUID.randomUUID(); <i class="conum" data-value="1"></i><b>(1)</b>
+
+  java.nio.file.Path file = temporaryFolder.newFile(uploadId.toString()); <i class="conum" data-value="2"></i><b>(2)</b>
+  long offset = IOUtil.copyToFile(file, reader, Integer.MAX_VALUE); <i class="conum" data-value="3"></i><b>(3)</b>
+  return Response
+    .status(202)
+    .entity("{\n" + "  \"uploadId\": \"" + uploadId + "\",\n"
+      + "  \"offset\": " + offset + "\n" + "}").build();
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Generates a random number as <code>uploadId</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Creates a new file using the generated <em>UUID</em> in a temporal directory.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>Copies content to temporal file. Lat argument is to limit the amount of bytes that can be saved per chunked.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock">
+<div class="title">Successive calls</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java" data-lang="java">@PUT
+@Path("/chunkedUpload")
+@Consumes("*/*")
+@Produces(MediaType.APPLICATION_JSON)
+public Response chunked(InputStream reader, @QueryParam("uploadId") String uploadId, @QueryParam("offset") Long offset) throws IOException {
+  File file = new File(temporaryFolder.getRoot(), uploadId);
+
+  if(isUploadIdValid(file)) {
+    if(isOffsetValid(file, offset)) { <i class="conum" data-value="1"></i><b>(1)</b>
+      long newOffset = IOUtil.copyToFile(file.toPath(), reader, Integer.MAX_VALUE); <i class="conum" data-value="2"></i><b>(2)</b>
+
+      return Response.status(202).entity("{\n" +
+        "  \"uploadId\": \""+uploadId+"\",\n" +
+        "  \"offset\": " + (offset + newOffset) + "\n" +
+        "}").build();
+
+    } else {
+      return Response.status(400).build();
+    }
+  } else {
+    return Response.noContent().build();
+  }
+}
+
+private boolean isOffsetValid(File file, long offset) {
+  return file.length() == offset;
+}
+
+private boolean isUploadIdValid(File file) {
+  return file.exists();
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Checks if <code>uploadId</code> exists and if the offset is correct.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Appends content to the already created file.</td>
+</tr>
+</table>
+</div>
+<div class="listingblock">
+<div class="title">Commit</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-java" data-lang="java">@POST
+@Path("/commitChunkedUpload")
+@Consumes(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON)
+public Response commit(@QueryParam("uploadId") String uploadId, String content) {
+  File file = new File(temporaryFolder.getRoot(), uploadId);
+
+  if(isUploadIdValid(file)) {
+    JsonReader parser = Json.createReader(new StringReader(content));
+    JsonObject readObject = parser.readObject(); <i class="conum" data-value="1"></i><b>(1)</b>
+    file.renameTo(new File(temporaryFolder.getRoot(), readObject.getString("filename"))); <i class="conum" data-value="2"></i><b>(2)</b>
+
+    return Response.created(URI.create("/"+uploadId)).build();
+  } else {
+    return Response.noContent().build();
+  }
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Parses the <em>JSON</em> document-</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Gets filename provided and renames the uploaded file. Note that this operation can be insecure and should require security checks depending on project.</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_rest_polling_2"><a class="anchor" href="#_rest_polling_2"></a>4.9.6. REST Polling</h4>
 
 </div>
 <div class="sect3">
-<h4 id="_security_2"><a class="anchor" href="#_security_2"></a>4.9.6. Security</h4>
+<h4 id="_security_2"><a class="anchor" href="#_security_2"></a>4.9.7. Security</h4>
 <div class="sect4">
 <h5 id="_authentication_2"><a class="anchor" href="#_authentication_2"></a>Authentication</h5>
 <div class="paragraph">
@@ -4241,7 +4418,7 @@ public class BookResource {
 <div id="footer">
 <div id="footer-text">
 Version 1.0<br>
-Last updated 2015-03-09 10:58:03 CET
+Last updated 2015-03-13 15:56:08 CET
 </div>
 </div>
 </body>
