@@ -526,7 +526,7 @@ TIP: `processed` and `of` are integers, but it may contain a null value in case 
                |                                                                    |
                |                           +-------------------+                    |
                |                           |      HTTP 201     |                    |
-               |<--------------------------| Location /books/12|--------------------|
+               |<--------------------------| Location  books/12|--------------------|
                |                           +-------------------+                    |
 ....
 

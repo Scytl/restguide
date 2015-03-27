@@ -244,7 +244,7 @@ public class BookResource {
     Book book = fromJson(jsonBook); // <4>
     book = insertBook(book);
 
-    return Response.created(URI.create("/"+book.getId())).build(); // <5>
+    return Response.created(URI.create(book.getId())).build(); // <5>
   }
 }
 ----
@@ -1310,7 +1310,7 @@ public Response commit(@QueryParam("uploadId") String uploadId, String content) 
     JsonObject readObject = parser.readObject(); //<1>
     file.renameTo(new File(temporaryFolder.getRoot(), readObject.getString("filename"))); //<2>
 
-    return Response.created(URI.create("/"+uploadId)).build();
+    return Response.created(URI.create(uploadId)).build();
   } else {
     return Response.noContent().build();
   }
@@ -1318,6 +1318,66 @@ public Response commit(@QueryParam("uploadId") String uploadId, String content) 
 ----
 <1> Parses the _JSON_ document-
 <2> Gets filename provided and renames the uploaded file. Note that this operation can be insecure and should require security checks depending on project.
+
+And finally a grey box test which allows us test from client side and server side at same time:
+
+[source, java]
+.RestUploadTest.java
+----
+@RunWith(Arquillian.class)
+@WarpTest //<1>
+public class RestUploadTest {
+
+  @Deployment
+  public static final WebArchive deployment() {
+    return ShrinkWrap
+      .create(WebArchive.class)
+      .addClasses(BoundedInputStream.class, IOUtil.class,
+        P12Resource.class, TemporaryFolder.class)
+      .addAsWebInfResource(EmptyAsset.INSTANCE, "beans.xml")
+      .addAsLibraries(
+        Maven.resolver().loadPomFromFile("pom.xml")
+        .resolve("org.glassfish:javax.json")
+        .withTransitivity().as(JavaArchive.class));
+  }
+
+  @ArquillianResource
+  URL baseUrl;
+
+  @Test
+  @RunAsClient //<2>
+  public void shouldUploadContent() {
+    Warp.initiate( //<3>
+        () -> {
+          URI endpoint =
+          UriBuilder.fromPath(baseUrl.toExternalForm())
+            .path(P12Resource.class).path("chunkedUpload")
+            .build();
+          given().request().body("This is a test file.".getBytes())
+            .post(endpoint).then().assertThat()
+            .body("uploadId", notNullValue()).and()
+            .body("offset", notNullValue());
+
+        })
+        .inspect(new Inspection() { //<4>
+          private static final long serialVersionUID = 1L;
+
+          @Inject
+          TemporaryFolder temporaryFolder;
+
+          @AfterServlet
+          public void assertCreatedFile() {
+            assertThat(temporaryFolder.getRoot(), notNullValue());
+          }
+
+        });
+  }
+}
+----
+<1> Sets a test as Arquillian Warp test.
+<2> `@Deployment` sets test as server test and test method is configured to _run in client_.
+<3> `initiate` method is executed on client side.
+<4> `inspect` method is executed on server side.
 
 === REST Polling
 
